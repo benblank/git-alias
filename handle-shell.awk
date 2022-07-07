@@ -4,18 +4,8 @@ function handle(name, body) {
 }
 
 ## Turn any string into a shell-style single-quoted string.
-function quote(string,   single, quotedsingle, idx, parts, count, result) {
-  if (string == "")
-    return "\"\""
+function quote(string) {
+  gsub(/'/, "'\\''", string)
 
-  single = "'"
-  quotedsingle = "\"'\""
-  count = split(string, parts, single)
-
-  result = single parts[1] single
-
-  for (idx = 2; idx <= count; idx++)
-    result = result quotedsingle single parts[idx] single
-
-  return result
+  return "'" string "'"
 }
