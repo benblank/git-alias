@@ -6,21 +6,51 @@ boilerplate.
 
 ## Installation
 
-The simplest way to install these scripts is to clone this repository or
-download the scripts directly using the "Raw" buttons at the top of their GitHub
-pages, then copy/move/symlink them into a location which is available on your
-PATH.
+### `git clone`
+
+The simplest way to install these scripts is to clone this repository, then
+symlink the `.sh` files into a location which is available on your PATH.
 
 For example, if `~/.local/bin` is on your path:
 
-```
+```console
 $ git clone https://github.com/benblank/git-alias.git
-$ ln -s "$(pwd)"/git-alias/git-alias.sh ~/.local/bin/git-alias
-$ ln -s "$(pwd)"/git-alias/git-unalias.sh ~/.local/bin/git-unalias
+$ ln -s "$PWD"/git-alias/git-alias.sh ~/.local/bin/git-alias
+$ ln -s "$PWD"/git-alias/git-unalias.sh ~/.local/bin/git-unalias
 ```
 
-Note that the destination names lack the `.sh` extension. This is imporant, as
-Git will otherwise require you to include it when invoking the scripts!
+_Note that the destination names lack the `.sh` extension. This is imporant, as
+Git will otherwise require you to include it when invoking the scripts!_
+
+This makes it easy to update the scripts when new versions are released, by
+going back into the git-alias directory and running `git pull`.
+
+### Downloading directly
+
+Alternatively, you can download the files and place them in a directory which is
+on your PATH. Make sure to also download the `.awk` and `.gawk` files, which are
+necessary to view your aliases. They must be in the same directory as the
+`git-alias.sh` and `git-unalias.sh` scripts, though a single level of symlinking
+should work fine.
+
+For example, if `~/.local/bin` is on your path and you downloaded all the files
+to `~/Downloads`:
+
+```console
+$ mv ~/Downloads/git-alias.sh ~/.local/bin/git-alias
+$ mv ~/Downloads/git-unalias.sh ~/.local/bin/git-unalias
+$ mv ~/Downloads/handle-gitconfig.awk ~/.local/bin
+$ mv ~/Downloads/handle-shell.awk ~/.local/bin
+$ mv ~/Downloads/read-aliases.gawk ~/.local/bin
+$ mv ~/Downloads/git-alias.sh ~/.local/bin
+$ chmod +x ~/.local/bin/git-alias
+$ chmod +x ~/.local/bin/git-unalias
+```
+
+_Note that the main scripts are given new names, without the `.sh` extension.
+This is imporant, as Git will otherwise require you to include it when invoking
+the scripts! You also need to make those scripts executable (the awk and gawk
+scripts don't need to be)._
 
 ## Subcommands
 
