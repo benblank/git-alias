@@ -48,6 +48,6 @@ else
   else
     # Alias name missing; display all aliases.
 
-    git config --global --list | gawk "$quote_function match(\$0, /^alias\.(\w+)=(.+)/, parts) { print \"git alias \" parts[1] \" \" quote(parts[2]) }"
+    git config --global --get-regex alias\\. | gawk "$quote_function match(\$0, /^alias\.(\w+) (.+)/, parts) { print \"git alias \" parts[1] \" \" quote(parts[2]) }"
   fi
 fi
