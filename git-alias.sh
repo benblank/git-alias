@@ -57,7 +57,7 @@ if [ $# -gt 1 ]; then
   # Using "$*" here allows commands like `git alias cdiff diff --cached` to work
   # as expected by combining all the arguments after the alias name into a
   # single string.
-  git config $where alias."$name" "$*"
+  git config "$where" alias."$name" "$*"
 else
   # Alias definition missing; display alias(es) instead.
 
@@ -70,7 +70,7 @@ else
       if [ $# -gt 0 ]; then
         # Display only the named alias.
 
-        alias="$(git config $where --get alias."$1")"
+        alias="$(git config "$where" --get alias."$1")"
 
         if [ -n "$alias" ]; then
           echo "$alias" | awk -v name="$1" -f "$script_dir/read-all.awk" -f "$script_dir/handle-shell.awk"
@@ -82,7 +82,7 @@ else
       else
         # Alias name missing; display all aliases.
 
-        git config $where --get-regex ^alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
+        git config "$where" --get-regex ^alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
       fi
     ;;
 
@@ -98,7 +98,7 @@ else
       if [ $# -gt 0 ]; then
         # Display only the named alias.
 
-        alias="$(git config $where --get alias."$1")"
+        alias="$(git config "$where" --get alias."$1")"
 
         if [ -n "$alias" ]; then
           echo "$alias" | awk -v name="$1" -v indent="$indent" -f "$script_dir/read-all.awk" -f "$script_dir/handle-gitconfig.awk"
@@ -110,7 +110,7 @@ else
       else
         # Alias name missing; display all aliases.
 
-        git config $where --get-regex ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
+        git config "$where" --get-regex ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
       fi
     ;;
 
