@@ -52,7 +52,96 @@ This is imporant, as Git will otherwise require you to include it when invoking
 the scripts! You also need to make those scripts executable (the awk scripts
 don't need to be)._
 
+## Configuration files
+
+All subcommands added by git-alias operate on configuration files, and you can
+specify which file you want them to use. By default, they will use the value
+stored at the location specified in your `git-alias.config-file` Git setting,
+which can be either one of the flags in the [Common flags](#common-flags)
+section or the path to a file. If that setting is absent, your "global" Git
+configuration will be used instead (usually `~/.gitconfig`).
+
+When invoking a git-alias subcommand, you can also use any of the flags
+understood by `git config` to change which file is used to store aliases, or
+`--default-file` to restore the default behavior.
+
+### Example: Moving your existing aliases into a separate file
+
+I find it convenient to keep my Git aliases in a dedicated file, so that I can
+share it between computers without bringing along _all_ of my Git settings (some
+of which are system-specific). Using the steps below, you can move your new or
+existing aliases into a separate file.
+
+_Be sure to back up your Git configuration first, just in case something goes
+wrong._
+
+1. Move your existing global aliases to a new file:
+
+   ```console
+   $ git alias --global > ~/.gitconfig-aliases
+   ```
+
+2. Remove your aliases from the global configuration file:
+
+   ```console
+   $ git unalias --global '*'
+   ```
+
+3. Tell Git where to find your aliases:
+
+   ```console
+   $ git config --global --add include.path ~/.gitconfig-aliases
+   ```
+
+   Afterward, verify that your Git aliases still work.
+
+4. Tell git-alias where to find your aliases:
+
+   ```console
+   $ git config --global git-alias.config-file ~/.gitconfig-aliases
+   ```
+
+   Afterward, verify that git-alias can still find your aliases:
+
+   ```console
+   $ git alias
+   ```
+
+### Example: Using local aliases in a repository
+
+Because Git gets its configuration from the most specific file available, it's
+easy to use git-alias to manage local aliases for individual repositories but
+still manage global ones elsewhere.
+
+Inside a repository, run `git config git-alias.config-file --local` to tell
+git-alias to use the local configuration file. Now, Git will recognize aliases
+in both the global and local configuration files, but git-alias will manage only
+the local ones by default.
+
+If you ever need to manage global aliases while in that repository, you can
+simply use the `--global` flag.
+
 ## Subcommands
+
+### Common flags
+
+- `--default-file` (default when `git-alias.config-file` is set) — Store aliases
+  as determined by the flag or in the file stored in your Git configuration.
+
+- `--file <path>` — Store aliases in the specified file.
+
+- `--global` (default when `git-alias.config-file` is **not** set) — Store
+  aliases in the global configuration file (usually `~/.gitconfig`).
+
+- `--local` — Store aliases in the per-repository configuration file
+  (`<repo root>/.git/config`).
+
+- `--system` — Store aliases in the system configuration file (usually
+  `/etc/gitconfig`, but can vary by system). Note that normal users may not have
+  write permission to this file.
+
+- `--worktree` — Store aliases in the worktree's configuration file, if
+  worktrees are enabled. Otherwise, behaves like `--local`.
 
 ### `git alias`
 
@@ -100,16 +189,9 @@ All flags must precede the alias name, if any.
   configuration file when displaying them. Overrides `--shell`. Not applicable
   when creating an alias.
 
-- `--global` (default) — Use the "global" Git configuration file
-  (`~/.gitconfig`) when reading or creating aliases. Overrides `--local`.
-
 - `--header` (default when using `--config`) — Include the `[alias]` section
   header when displaying aliases and indent each alias definition. Overrides
   `--no-header`. Only applicable after `--config`.
-
-- `--local` — Use the "local" Git configuration file
-  (`<repository-root>/.git/config`) when reading or creating aliases. Overrides
-  `--global`.
 
 - `--no-header` — Do not include a section header or use indentation when
   displaying aliases. Overrides `--header`. Only applicable after `--config`.
@@ -117,6 +199,8 @@ All flags must precede the alias name, if any.
 - `--shell` (default) — Format aliases as appropriate for execution via the
   shell when displaying them. Overrides `--config`. Not applicable when creating
   an alias.
+
+_See also the section on [common flags](#common-flags)._
 
 ### `git unalias`
 
@@ -149,8 +233,4 @@ All flags must precede the alias name.
   don't actually remove any of them. This is handy for testing your patterns
   before using them!
 
-- `--global` (default) — Use the "global" Git configuration file
-  (`~/.gitconfig`) when removing aliases. Overrides `--local`.
-
-- `--local` — Use the "local" Git configuration file
-  (`<repository-root>/.git/config`) when removing aliases. Overrides `--global`.
+_See also the section on [common flags](#common-flags)._

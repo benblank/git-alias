@@ -9,12 +9,14 @@ beginswith() {
 }
 
 format=default
-where=--global
+where=default
 
 while true; do
   case "$1" in
     --config ) format=config-header;;
-    --global | --local ) where=$1;;
+    --default-file ) where=default;;
+    --file ) where="--file $2"; shift;;
+    --global | --local | --system | --worktree ) where=$1;;
 
     --header )
       if beginswith config- "$format"; then
@@ -44,6 +46,19 @@ while true; do
   shift
 done
 
+# Convert the default file location into a valid command-line flag for Git. If a
+# flag or custom file is configured, use that. Otherwise, fall back to the
+# global file.
+if [ "$where" = default ]; then
+  configured_location="$(git config --get git-alias.config-file)"
+
+  case "$configured_location" in
+    "" ) where=--global;;
+    "--file "* | --global | --local | --system | --worktree ) where="$configured_location";;
+    * ) where="--file $configured_location"
+  esac
+fi
+
 if [ $# -gt 1 ]; then
   # Define an alias.
 
@@ -57,7 +72,12 @@ if [ $# -gt 1 ]; then
   # Using "$*" here allows commands like `git alias cdiff diff --cached` to work
   # as expected by combining all the arguments after the alias name into a
   # single string.
-  git config "$where" alias."$name" "$*"
+  #
+  # `$where` is deliberately unquoted here, as it may contain multiple
+  # parameters.
+  #
+  # shellcheck disable=2086
+  git config $where alias."$name" "$*"
 else
   # Alias definition missing; display alias(es) instead.
 
@@ -70,7 +90,11 @@ else
       if [ $# -gt 0 ]; then
         # Display only the named alias.
 
-        alias="$(git config "$where" --get alias."$1")"
+        # `$where` is deliberately unquoted here, as it may contain multiple
+        # parameters.
+        #
+        # shellcheck disable=2086
+        alias="$(git config $where --get alias."$1")"
 
         if [ -n "$alias" ]; then
           echo "$alias" | awk -v name="$1" -f "$script_dir/read-all.awk" -f "$script_dir/handle-shell.awk"
@@ -82,7 +106,11 @@ else
       else
         # Alias name missing; display all aliases.
 
-        git config "$where" --get-regex ^alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
+        # `$where` is deliberately unquoted here, as it may contain multiple
+        # parameters.
+        #
+        # shellcheck disable=2086
+        git config $where --get-regex ^alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
       fi
     ;;
 
@@ -98,7 +126,11 @@ else
       if [ $# -gt 0 ]; then
         # Display only the named alias.
 
-        alias="$(git config "$where" --get alias."$1")"
+        # `$where` is deliberately unquoted here, as it may contain multiple
+        # parameters.
+        #
+        # shellcheck disable=2086
+        alias="$(git config $where --get alias."$1")"
 
         if [ -n "$alias" ]; then
           echo "$alias" | awk -v name="$1" -v indent="$indent" -f "$script_dir/read-all.awk" -f "$script_dir/handle-gitconfig.awk"
@@ -110,7 +142,11 @@ else
       else
         # Alias name missing; display all aliases.
 
-        git config "$where" --get-regex ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
+        # `$where` is deliberately unquoted here, as it may contain multiple
+        # parameters.
+        #
+        # shellcheck disable=2086
+        git config $where --get-regex ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
       fi
     ;;
 

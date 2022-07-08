@@ -1,12 +1,14 @@
 #!/bin/sh
 
 dry_run=
-where=--global
+where=default
 
 while true; do
   case "$1" in
+    --default-file ) where=default;;
     --dry-run ) dry_run="[dry-run] ";;
-    --global | --local ) where=$1;;
+    --file ) where="--file $2"; shift;;
+    --global | --local | --system | --worktree ) where=$1;;
     -- ) shift; break;;
     *) break;;
   esac
@@ -18,6 +20,19 @@ if [ $# -eq 0 ]; then
   >&2 echo "Usage: git unalias [flags] <pattern>..."
 
   exit 1
+fi
+
+# Convert the default file location into a valid command-line flag for Git. If a
+# flag or custom file is configured, use that. Otherwise, fall back to the
+# global file.
+if [ "$where" = default ]; then
+  configured_location="$(git config --get git-alias.config-file)"
+
+  case "$configured_location" in
+    "" ) where=--global;;
+    "--file "* | --global | --local | --system | --worktree ) where="$configured_location";;
+    * ) where="--file $configured_location"
+  esac
 fi
 
 # This variable controls the script's exit code.
@@ -39,15 +54,21 @@ unset_matching_aliases() {
 
   # `$names` is deliberately unquoted so that its words (the names of the
   # aliases) can be spread into positional parameters.
+  #
   # shellcheck disable=2086
   set -- $names
 
   while [ $# -gt 0 ]; do
     # `$pattern` is deliberately unquoted so that it can act as a pattern.
+    #
     # shellcheck disable=2254
     case "$1" in
       $pattern )
-        if [ -n "$dry_run" ] || git config "$where" --unset alias."$1";then
+        # `$where` is deliberately unquoted here, as it may contain multiple
+        # parameters.
+        #
+        # shellcheck disable=2086
+        if [ -n "$dry_run" ] || git config $where --unset alias."$1";then
           echo "${dry_run}'unset $1'"
 
           found=1
@@ -80,7 +101,12 @@ unset_matching_aliases() {
 # any aliases which were unset. This allows us to prevent trying to unset the
 # same alias multiple times if it matches multiple patterns without having to
 # re-query `git config` after every iteration.
-names="$(git config "$where" --get-regex ^alias\\. | awk '{ sub("alias.", "", $1); print $1 }')"
+#
+# `$where` is deliberately unquoted here, as it may contain multiple
+# parameters.
+#
+# shellcheck disable=2086
+names="$(git config $where --get-regex ^alias\\. | awk '{ sub("alias.", "", $1); print $1 }')"
 
 while [ $# -gt 0 ]; do
   unset_matching_aliases "$1"
