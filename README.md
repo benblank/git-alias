@@ -28,10 +28,10 @@ going back into the git-alias directory and running `git pull`.
 ### Downloading directly
 
 Alternatively, you can download the files and place them in a directory which is
-on your PATH. Make sure to also download the `.awk` and `.gawk` files, which are
-necessary to view your aliases. They must be in the same directory as the
-`git-alias.sh` and `git-unalias.sh` scripts, though a single level of symlinking
-should work fine.
+on your PATH. Make sure to also download the `.awk` files, which are necessary
+to view your aliases. They must be in the same directory as the `git-alias.sh`
+and `git-unalias.sh` scripts, though a single level of symlinking should work
+fine.
 
 For example, if `~/.local/bin` is on your path and you downloaded all the files
 to `~/Downloads`:
@@ -41,7 +41,7 @@ $ mv ~/Downloads/git-alias.sh ~/.local/bin/git-alias
 $ mv ~/Downloads/git-unalias.sh ~/.local/bin/git-unalias
 $ mv ~/Downloads/handle-gitconfig.awk ~/.local/bin
 $ mv ~/Downloads/handle-shell.awk ~/.local/bin
-$ mv ~/Downloads/read-aliases.gawk ~/.local/bin
+$ mv ~/Downloads/read-aliases.awk ~/.local/bin
 $ mv ~/Downloads/git-alias.sh ~/.local/bin
 $ chmod +x ~/.local/bin/git-alias
 $ chmod +x ~/.local/bin/git-unalias
@@ -49,8 +49,8 @@ $ chmod +x ~/.local/bin/git-unalias
 
 _Note that the main scripts are given new names, without the `.sh` extension.
 This is imporant, as Git will otherwise require you to include it when invoking
-the scripts! You also need to make those scripts executable (the awk and gawk
-scripts don't need to be)._
+the scripts! You also need to make those scripts executable (the awk scripts
+don't need to be)._
 
 ## Subcommands
 
@@ -66,8 +66,7 @@ parameters.
 
 Invoked without any parameters, it displays all defined Git aliases as either
 `git alias …` commands (the default) or as Git configuration lines (when given
-the `--config` flag). Displaying all existing aliases requires gawk to be
-present on your system.
+the `--config` flag).
 
 With a single parameter, only the alias with that name is displayed; if no such
 alias exists, an error will be reported.
