@@ -120,11 +120,20 @@ All flags must precede the alias name, if any.
 
 ### `git unalias`
 
-This subcommand lets you remove a defined alias without having to use the
+This subcommand lets you remove defined aliases without having to use the
 `git config` command directly. It works on your global Git configuration
 (`~/.gitconfig`) by default, but this can be changed using the `--local` flag.
 
-You must invoke it with a single parameter; the name of the alias to remove.
+When you invoke it, you must supply at least one parameter. Each parameter is
+then used as a matching pattern to determine which alias(es) to delete. When
+using patterns, make sure to quote them on the command line, or your shell may
+try to expand them! It can also be handy to use the `--dry-run` flag to test
+them before you commit to removing anything.
+
+The exact features of the pattern matching may vary from system to system,
+though I would expect `?` (single-character wildcard) and `*` (multi-character
+wildcard) to work anywhere. They will behave the same way patterns in `case`
+statements do in your `/bin/sh` shell.
 
 #### Flags
 
@@ -135,6 +144,10 @@ which appear later "override" flags which appear earlier. In other words,
 Git configuration file, as that flag appeared last.
 
 All flags must precede the alias name.
+
+- `--dry-run` — Print the names of any aliases which _would_ be removed, but
+  don't actually remove any of them. This is handy for testing your patterns
+  before using them!
 
 - `--global` (default) — Use the "global" Git configuration file
   (`~/.gitconfig`) when removing aliases. Overrides `--local`.
