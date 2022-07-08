@@ -82,7 +82,7 @@ else
       else
         # Alias name missing; display all aliases.
 
-        git config $where --get-regex alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
+        git config $where --get-regex ^alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
       fi
     ;;
 
@@ -110,7 +110,7 @@ else
       else
         # Alias name missing; display all aliases.
 
-        git config $where --get-regex alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
+        git config $where --get-regex ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
       fi
     ;;
 
