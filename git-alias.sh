@@ -143,6 +143,8 @@ else
         echo "[alias]"
 
         indent="	"  # <- tab character
+      else
+        indent=
       fi
 
       if [ $# -gt 0 ]; then
@@ -177,6 +179,8 @@ else
 
       if [ "$format" = json-compact ]; then
         style=compact
+      else
+        style=pretty
       fi
 
       if [ $# -gt 0 ]; then
