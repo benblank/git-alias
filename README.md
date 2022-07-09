@@ -154,8 +154,8 @@ You can invoke this subcommand with zero, one, or more than one positional
 parameters.
 
 Invoked without any parameters, it displays all defined Git aliases as either
-`git alias …` commands (the default) or as Git configuration lines (when given
-the `--config` flag).
+`git alias …` commands (the default) or in the requested format (see the flags
+below).
 
 With a single parameter, only the alias with that name is displayed; if no such
 alias exists, an error will be reported.
@@ -185,19 +185,30 @@ flag appeared last.
 
 All flags must precede the alias name, if any.
 
+- `--compact` — Do not include unnecessary whitespace (not even a trailing
+  newline) when displaying aliases. Overrides `--pretty`. Only applicable after
+  `--json`.
+
 - `--config` — Format aliases as appropriate for including in a Git
-  configuration file when displaying them. Overrides `--shell`. Not applicable
+  configuration file when displaying them. Overrides `--json` and `--shell`. Not applicable
   when creating an alias.
 
 - `--header` (default when using `--config`) — Include the `[alias]` section
   header when displaying aliases and indent each alias definition. Overrides
   `--no-header`. Only applicable after `--config`.
 
+- `--json` — Format aliases as JSON. Overrides `--config` and `--shell`. Not
+  applicable when creating an alias.
+
 - `--no-header` — Do not include a section header or use indentation when
   displaying aliases. Overrides `--header`. Only applicable after `--config`.
 
+- `--pretty` — Include extra whitespace to make the output more readable for
+  humans when displaying aliases. Overrides `--compact`. Only applicable after
+  `--json`.
+
 - `--shell` (default) — Format aliases as appropriate for execution via the
-  shell when displaying them. Overrides `--config`. Not applicable when creating
+  shell when displaying them. Overrides `--config` and `--json`. Not applicable when creating
   an alias.
 
 _See also the section on [common flags](#common-flags)._

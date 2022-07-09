@@ -13,6 +13,16 @@ where=default
 
 while true; do
   case "$1" in
+    --compact )
+      if beginswith json- "$format"; then
+        format=json-compact
+      else
+        >&2 echo "The --compact flag may only be used after --json."
+
+        exit 1
+      fi
+    ;;
+
     --config ) format=config-header;;
     --default-file ) where=default;;
     --file ) where="--file $2"; shift;;
@@ -28,11 +38,23 @@ while true; do
       fi
     ;;
 
+    --json ) format=json-pretty;;
+
     --no-header )
       if beginswith config- "$format"; then
         format=config-no-header
       else
         >&2 echo "The --no-header flag may only be used after --config."
+
+        exit 1
+      fi
+    ;;
+
+    --pretty )
+      if beginswith json- "$format"; then
+        format=json-pretty
+      else
+        >&2 echo "The --pretty flag may only be used after --json."
 
         exit 1
       fi
@@ -147,6 +169,40 @@ else
         #
         # shellcheck disable=2086
         git config $where --get-regex ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
+      fi
+    ;;
+
+    json-compact | json-pretty )
+      # Produce JSON output.
+
+      if [ "$format" = json-compact ]; then
+        style=compact
+      fi
+
+      if [ $# -gt 0 ]; then
+        # Display only the named alias.
+
+        # `$where` is deliberately unquoted here, as it may contain multiple
+        # parameters.
+        #
+        # shellcheck disable=2086
+        alias="$(git config $where --get alias."$1")"
+
+        if [ -n "$alias" ]; then
+          echo "$alias" | awk -v name="$1" -v style="$style" -f "$script_dir/read-all.awk" -f "$script_dir/handle-json.awk"
+        else
+          >&2 echo "No alias named \"$1\" exists."
+
+          exit 1
+        fi
+      else
+        # Alias name missing; display all aliases.
+
+        # `$where` is deliberately unquoted here, as it may contain multiple
+        # parameters.
+        #
+        # shellcheck disable=2086
+        git config $where --get-regex ^alias\\. | awk -v style="$style" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-json.awk"
       fi
     ;;
 
