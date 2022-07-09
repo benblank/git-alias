@@ -5,7 +5,6 @@ where=default
 
 while true; do
   case "$1" in
-    --default-file ) where=default;;
     --dry-run ) dry_run="[dry-run] ";;
     --file ) where="--file $2"; shift;;
     --global | --local | --system | --worktree ) where=$1;;

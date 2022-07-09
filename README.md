@@ -62,8 +62,7 @@ section or the path to a file. If that setting is absent, your "global" Git
 configuration will be used instead (usually `~/.gitconfig`).
 
 When invoking a git-alias subcommand, you can also use any of the flags
-understood by `git config` to change which file is used to store aliases, or
-`--default-file` to restore the default behavior.
+understood by `git config` to change which file is used to store aliases.
 
 ### Example: Moving your existing aliases into a separate file
 
@@ -125,13 +124,10 @@ simply use the `--global` flag.
 
 ### Common flags
 
-- `--default-file` (default when `git-alias.config-file` is set) — Store aliases
-  as determined by the flag or in the file stored in your Git configuration.
-
 - `--file <path>` — Store aliases in the specified file.
 
-- `--global` (default when `git-alias.config-file` is **not** set) — Store
-  aliases in the global configuration file (usually `~/.gitconfig`).
+- `--global` (default when `git-alias.config-file` isn't set) — Store aliases in
+  the global configuration file (usually `~/.gitconfig`).
 
 - `--local` — Store aliases in the per-repository configuration file
   (`<repo root>/.git/config`).
@@ -185,31 +181,23 @@ flag appeared last.
 
 All flags must precede the alias name, if any.
 
-- `--compact` — Do not include unnecessary whitespace (not even a trailing
-  newline) when displaying aliases. Overrides `--pretty`. Only applicable after
-  `--json`.
-
 - `--config` — Format aliases as appropriate for including in a Git
-  configuration file when displaying them. Overrides `--json` and `--shell`. Not applicable
-  when creating an alias.
+  configuration file when displaying them, including the `[alias]` section
+  header. Not applicable when creating an alias.
 
-- `--header` (default when using `--config`) — Include the `[alias]` section
-  header when displaying aliases and indent each alias definition. Overrides
-  `--no-header`. Only applicable after `--config`.
+- `--config-no-header` — Format aliases as appropriate for including in a Git
+  configuration file when displaying them, but do **not** include the `[alias]`
+  section header or indent the definitions. Not applicable when creating an
+  alias.
 
-- `--json` — Format aliases as JSON. Overrides `--config` and `--shell`. Not
+- `--json` — Format aliases as "pretty-printed" JSON when displaying them. Not
   applicable when creating an alias.
 
-- `--no-header` — Do not include a section header or use indentation when
-  displaying aliases. Overrides `--header`. Only applicable after `--config`.
-
-- `--pretty` — Include extra whitespace to make the output more readable for
-  humans when displaying aliases. Overrides `--compact`. Only applicable after
-  `--json`.
+- `--json-compact` — Format aliases as JSON when displaying them, but do not
+  include unnecessary whitespace (not even a trailing newline).
 
 - `--shell` (default) — Format aliases as appropriate for execution via the
-  shell when displaying them. Overrides `--config` and `--json`. Not applicable when creating
-  an alias.
+  shell when displaying them. Not applicable when creating an alias.
 
 _See also the section on [common flags](#common-flags)._
 

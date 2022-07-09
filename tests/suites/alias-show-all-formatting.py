@@ -31,12 +31,7 @@ TEST_PARAMETERS = [
         "[alias]\n",
     ),
     TestParameters(
-        ["--config", "--header"],
-        '[alias]\n\tfoo = "diff"\n\tml = "!echo foo\\necho bar"\n\tfunc = "!f() {}; f"\n',
-        "[alias]\n",
-    ),
-    TestParameters(
-        ["--config", "--no-header"],
+        ["--config-no-header"],
         'foo = "diff"\nml = "!echo foo\\necho bar"\nfunc = "!f() {}; f"\n',
     ),
     TestParameters(
@@ -45,12 +40,7 @@ TEST_PARAMETERS = [
         "{}\n",
     ),
     TestParameters(
-        ["--json", "--pretty"],
-        '{\n  "foo": "diff",\n  "ml": "!echo foo\\necho bar",\n  "func": "!f() {}; f"\n}\n',
-        "{}\n",
-    ),
-    TestParameters(
-        ["--json", "--compact"],
+        ["--json-compact"],
         '{"foo":"diff","ml":"!echo foo\\necho bar","func":"!f() {}; f"}',
         "{}",
     ),

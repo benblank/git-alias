@@ -31,12 +31,7 @@ TEST_PARAMETERS = [
         "[alias]\n",
     ),
     TestParameters(
-        ["--config", "--header"],
-        '[alias]\n\tfunc = "!f() {}; f"\n',
-        "[alias]\n",
-    ),
-    TestParameters(
-        ["--config", "--no-header"],
+        ["--config-no-header"],
         'func = "!f() {}; f"\n',
     ),
     TestParameters(
@@ -45,12 +40,7 @@ TEST_PARAMETERS = [
         "{}\n",
     ),
     TestParameters(
-        ["--json", "--pretty"],
-        '{\n  "func": "!f() {}; f"\n}\n',
-        "{}\n",
-    ),
-    TestParameters(
-        ["--json", "--compact"],
+        ["--json-compact"],
         '{"func":"!f() {}; f"}',
         "{}",
     ),

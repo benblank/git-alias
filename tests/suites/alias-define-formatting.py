@@ -4,11 +4,9 @@ from testlib import NO_ALIASES, CommandOutput, Suite, Test
 FORMAT_FLAGS = [
     ["--shell"],
     ["--config"],
-    ["--config", "--header"],
-    ["--config", "--no-header"],
+    ["--config-no-header"],
     ["--json"],
-    ["--json", "--pretty"],
-    ["--json", "--compact"],
+    ["--json-compact"],
 ]
 
 

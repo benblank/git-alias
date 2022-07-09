@@ -13,54 +13,9 @@ where=default
 
 while true; do
   case "$1" in
-    --compact )
-      if beginswith json- "$format"; then
-        format=json-compact
-      else
-        >&2 echo "The --compact flag may only be used after --json."
-
-        exit 1
-      fi
-    ;;
-
-    --config ) format=config-header;;
-    --default-file ) where=default;;
+    --config | --config-no-header | --json | --json-compact | --shell ) format=$1;;
     --file ) where="--file $2"; shift;;
     --global | --local | --system | --worktree ) where=$1;;
-
-    --header )
-      if beginswith config- "$format"; then
-        format=config-header
-      else
-        >&2 echo "The --header flag may only be used after --config."
-
-        exit 1
-      fi
-    ;;
-
-    --json ) format=json-pretty;;
-
-    --no-header )
-      if beginswith config- "$format"; then
-        format=config-no-header
-      else
-        >&2 echo "The --no-header flag may only be used after --config."
-
-        exit 1
-      fi
-    ;;
-
-    --pretty )
-      if beginswith json- "$format"; then
-        format=json-pretty
-      else
-        >&2 echo "The --pretty flag may only be used after --json."
-
-        exit 1
-      fi
-    ;;
-
-    --shell ) format=shell;;
     -- ) shift; break;;
     *) break;;
   esac
@@ -153,20 +108,20 @@ else
   awk_extra_init=
 
   case "$format" in
-    default | shell ) handler="handle-shell.awk";;
+    default | --shell ) handler="handle-shell.awk";;
 
-    config-header | config-no-header )
+    --config | --config-no-header )
       handler="handle-gitconfig.awk"
 
-      if [ "$format" = config-header ]; then
+      if [ "$format" = --config ]; then
         awk_extra_init="${awk_extra_init}print \"[alias]\";indent=\"\\t\";"
       fi
     ;;
 
-    json-compact | json-pretty )
+    --json | --json-compact )
       handler="handle-json.awk"
 
-      if [ "$format" = json-compact ]; then
+      if [ "$format" = --json-compact ]; then
         awk_extra_init="${awk_extra_init}style=\"compact\";"
       else
         awk_extra_init="${awk_extra_init}style=\"pretty\";"
