@@ -27,9 +27,9 @@ function handle(name, body) {
 }
 
 ## Determines whether to pretty-print the JSON output. If the variable `style`
-## is provided on the command line and set to exactly "compact", no whitespace
-## before or after elements will be emitted. Any other value will be treated as
-## "pretty", and produce more human-friendly output.
+## is set to exactly "compact", no optional whitespace before or after elements
+# will be emitted. Any other value will be treated as "pretty", and produce more
+# human-friendly output.
 function is_pretty() {
   return style != "compact"
 }

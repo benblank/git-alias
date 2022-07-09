@@ -146,111 +146,59 @@ else
 
   script_dir="$(dirname "$(canonicalize_path "$0")")"
 
+  # Extra variables needed by the awk scripts are set via a BEGIN block on the
+  # command line rather than via command-line arguments because it's awkward at
+  # best to pass multiple arguments through a single shell variable without
+  # mangling the whitespace.
+  awk_extra_init=
+
   case "$format" in
-    default | shell )
-      # Produce output suitable for use in/as a shell script.
-
-      if [ $# -gt 0 ]; then
-        # Display only the named alias.
-
-        # `$where` is deliberately unquoted here, as it may contain multiple
-        # parameters.
-        #
-        # shellcheck disable=2086
-        alias="$(git config $where --get alias."$1")"
-
-        if [ -n "$alias" ]; then
-          echo "$alias" | awk -v name="$1" -f "$script_dir/read-all.awk" -f "$script_dir/handle-shell.awk"
-        else
-          >&2 echo "No alias named \"$1\" exists."
-
-          exit 1
-        fi
-      else
-        # Alias name missing; display all aliases.
-
-        # `$where` is deliberately unquoted here, as it may contain multiple
-        # parameters.
-        #
-        # shellcheck disable=2086
-        git config $where --get-regexp ^alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
-      fi
-    ;;
+    default | shell ) handler="handle-shell.awk";;
 
     config-header | config-no-header )
-      # Produce output suitable for use in/as a Git configuration file.
+      handler="handle-gitconfig.awk"
 
       if [ "$format" = config-header ]; then
-        echo "[alias]"
-
-        indent="	"  # <- tab character
-      else
-        indent=
-      fi
-
-      if [ $# -gt 0 ]; then
-        # Display only the named alias.
-
-        # `$where` is deliberately unquoted here, as it may contain multiple
-        # parameters.
-        #
-        # shellcheck disable=2086
-        alias="$(git config $where --get alias."$1")"
-
-        if [ -n "$alias" ]; then
-          echo "$alias" | awk -v name="$1" -v indent="$indent" -f "$script_dir/read-all.awk" -f "$script_dir/handle-gitconfig.awk"
-        else
-          >&2 echo "No alias named \"$1\" exists."
-
-          exit 1
-        fi
-      else
-        # Alias name missing; display all aliases.
-
-        # `$where` is deliberately unquoted here, as it may contain multiple
-        # parameters.
-        #
-        # shellcheck disable=2086
-        git config $where --get-regexp ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
+        awk_extra_init="${awk_extra_init}print \"[alias]\";indent=\"\\t\";"
       fi
     ;;
 
     json-compact | json-pretty )
-      # Produce JSON output.
+      handler="handle-json.awk"
 
       if [ "$format" = json-compact ]; then
-        style=compact
+        awk_extra_init="${awk_extra_init}style=\"compact\";"
       else
-        style=pretty
-      fi
-
-      if [ $# -gt 0 ]; then
-        # Display only the named alias.
-
-        # `$where` is deliberately unquoted here, as it may contain multiple
-        # parameters.
-        #
-        # shellcheck disable=2086
-        alias="$(git config $where --get alias."$1")"
-
-        if [ -n "$alias" ]; then
-          echo "$alias" | awk -v name="$1" -v style="$style" -f "$script_dir/read-all.awk" -f "$script_dir/handle-json.awk"
-        else
-          >&2 echo "No alias named \"$1\" exists."
-
-          exit 1
-        fi
-      else
-        # Alias name missing; display all aliases.
-
-        # `$where` is deliberately unquoted here, as it may contain multiple
-        # parameters.
-        #
-        # shellcheck disable=2086
-        git config $where --get-regexp ^alias\\. | awk -v style="$style" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-json.awk"
+        awk_extra_init="${awk_extra_init}style=\"pretty\";"
       fi
     ;;
 
     * ) >&2 echo "Invalid format \"$format\". How did you do that?"; exit 1;;
   esac
+
+  if [ $# -gt 0 ]; then
+    # Display only the named alias.
+
+    # `$where` is deliberately unquoted here, as it may contain multiple
+    # parameters.
+    #
+    # shellcheck disable=2086
+    alias="$(git config $where --get alias."$1")"
+
+    if [ -n "$alias" ]; then
+      echo "$alias" | awk "BEGIN { name = \"$1\";$awk_extra_init } $(cat "$script_dir/read-all.awk") $(cat "$script_dir/$handler")"
+    else
+      >&2 echo "No alias named \"$1\" exists."
+
+      exit 1
+    fi
+  else
+    # Alias name missing; display all aliases.
+
+    # `$where` is deliberately unquoted here, as it may contain multiple
+    # parameters.
+    #
+    # shellcheck disable=2086
+    git config $where --get-regexp ^alias\\. | awk "BEGIN { $awk_extra_init } $(cat "$script_dir/read-aliases.awk") $(cat "$script_dir/$handler")"
+  fi
 fi

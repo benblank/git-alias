@@ -1,6 +1,6 @@
 # Gathers all input into a single string and feeds it to a function named
 # `handle` (which must be provided by a separate script), along with the
-# variable `name` (which must be provided on the command line).
+# variable `name`.
 
 {
   if (body == "") {

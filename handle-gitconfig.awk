@@ -1,6 +1,5 @@
 ## Prints the supplied alias name and body as lines for a Git configuration
-## file. The desired indent, if any, must be supplied on the command line as a
-## variable of that name.
+## file. The desired indent, if any, must be supplied.
 function handle(name, body) {
   print indent name " = " quote(body)
 }
