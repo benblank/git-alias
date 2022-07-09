@@ -162,7 +162,7 @@ alias exists, an error will be reported.
 
 With more than one parameter, the first is taken to be an alias name and a new
 alias with that name is defined as the remaining parameters (joined by spaces).
-For example, these invokations create identical aliases:
+For example, these invocations create identical aliases:
 
 ```
 $ git alias cdiff "diff --cached"

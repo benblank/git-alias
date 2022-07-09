@@ -1,4 +1,4 @@
-## Prints the supplied alias name and body as an invokation of `git alias`.
+## Prints the supplied alias name and body as an invocation of `git alias`.
 function handle(name, body) {
   print "git alias " name " " quote(body)
 }
