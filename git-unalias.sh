@@ -106,7 +106,7 @@ unset_matching_aliases() {
 # parameters.
 #
 # shellcheck disable=2086
-names="$(git config $where --get-regex ^alias\\. | awk '{ sub("alias.", "", $1); print $1 }')"
+names="$(git config $where --name-only --get-regex ^alias\\. | cut -d . -f 2)"
 
 while [ $# -gt 0 ]; do
   unset_matching_aliases "$1"
