@@ -1,9 +1,29 @@
+BEGIN {
+  printf "{"
+
+  is_first = 1
+}
+
 ## Stores the supplied alias name and body as an array index and element, to be
 ## processed by the END block just below it. It also tracks the size of the
 ## array in `alias_count`.
 function handle(name, body) {
-  aliases[name] = body
-  alias_count++
+  if (is_first) {
+    is_first = 0
+  } else {
+    printf ","
+  }
+
+  if (is_pretty()) printf "\n  "
+
+  # Git doesn't allow configuration keys to contain any characters which must
+  # be escaped in JSON strings, so there's no point in feeding them to
+  # `quote()`.
+  printf "\"" name "\":"
+
+  if (is_pretty()) printf " "
+
+  printf quote(body)
 }
 
 ## Determines whether to pretty-print the JSON output. If the variable `style`
@@ -14,38 +34,16 @@ function is_pretty() {
   return style != "compact"
 }
 
-## Prints the indices and elements of the `aliases` array as JSON.
 END {
-  json = "{"
-
-  if (is_pretty()) json = json "\n"
-
-  processed=0
-
-  for (name in aliases) {
-    if (is_pretty()) json = json "  "
-
-    # Git doesn't allow configuration keys to contain any characters which must
-    # be escaped in JSON strings, so there's no point in feeding them to
-    # `quote()`.
-    json = json "\"" name "\":"
-
-    if (is_pretty()) json = json " "
-
-    json = json quote(aliases[name])
-
-    if (++processed != alias_count) json = json ","
-
-    if (is_pretty()) json = json "\n"
+  if (is_pretty() && !is_first) {
+    printf "\n"
   }
 
-  json = json "}"
+  printf "}"
 
   if (is_pretty()) {
-    json = json "\n"
+    printf "\n"
   }
-
-  printf json
 }
 
 ## Turn any string into a valid JSON double-quoted string.
