@@ -103,7 +103,48 @@ if [ $# -gt 1 ]; then
 else
   # Alias definition missing; display alias(es) instead.
 
-  script_dir="$(dirname "$(readlink "$0")")"
+
+  # I can't believe there's no *actually* portable way to do this other than to
+  # implement (hack) it yourself. Might not work in all cases.
+  canonicalize_path() {
+    # Keep a copy of the original path for error reporting.
+    original="$1"
+
+    previous=
+    current="$1"
+
+    while [ "$previous" != "$current" ]; do
+      previous="$current"
+      dirname="$(dirname "$current")"
+      basename="$(basename "$current")"
+
+      # If basename is ".", we're done. Discard it and "return" just dirname.
+      if [ "$basename" = . ]; then
+        echo "$dirname"
+
+        return
+      fi
+
+      # If basename is "..", the only way to resolve it is to move it into
+      # dirname.
+      if [ "$basename" = ".." ]; then
+        dirname="$dirname/.."
+        basename="."
+      fi
+
+      cd -- "$dirname" || abort "Couldn't cd to \"$dirname\"."
+
+      if [ -h "$basename" ]; then
+        current="$(readlink "$basename" || abort "Couldn't resolve \"$dirname/$basename\" while canonicalizing \"$original\".")"
+      else
+        current="$(pwd)/$basename"
+      fi
+    done
+
+    echo "$current"
+  }
+
+  script_dir="$(dirname "$(canonicalize_path "$0")")"
 
   case "$format" in
     default | shell )
