@@ -311,22 +311,20 @@ class TestReport:
 class TestSuite:
     name: str
     tests: Iterable["TestCase | TestSuite"]
-    before_all: Callable[[], None] | None = field(default=None, kw_only=True)
-    before_each: Callable[[], None] | None = field(default=None, kw_only=True)
-    after_each: Callable[[], None] | None = field(default=None, kw_only=True)
-    after_all: Callable[[], None] | None = field(default=None, kw_only=True)
+    before_all: Callable[[], None] = field(default=lambda: None, kw_only=True)
+    before_each: Callable[[], None] = field(default=lambda: None, kw_only=True)
+    after_each: Callable[[], None] = field(default=lambda: None, kw_only=True)
+    after_all: Callable[[], None] = field(default=lambda: None, kw_only=True)
 
     def run(self, indent_level: int = 0) -> TestReport:
         print(_INDENT * indent_level + "- " + self.name)
 
         report = TestReport()
 
-        if self.before_all:
-            self.before_all()
+        self.before_all()
 
         for test in self.tests:
-            if self.before_each:
-                self.before_each()
+            self.before_each()
 
             try:
                 report += test.run(indent_level + 1)
@@ -343,10 +341,8 @@ class TestSuite:
 
                 report += TestReport(tests=1, errors=1)
 
-            if self.after_each:
-                self.after_each()
+            self.after_each()
 
-        if self.after_all:
-            self.after_all()
+        self.after_all()
 
         return report
