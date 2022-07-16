@@ -48,92 +48,8 @@ COMMON_PARAMETERS: Mapping[str, Iterable[Any]] = {
 }
 
 
-def add_aliases(context: "GitExecutionContext", aliases: Mapping[str, str]) -> None:
-    for name, contents in aliases.items():
-        _execute_command_in_context(
-            context,
-            ["git", "config", *context.location_flags, "alias." + name, contents],
-            check=True,
-        )
-
-
-def clear_aliases(context: "GitExecutionContext") -> None:
-    # We could run `git config --name-only` rather than picking the keys off
-    # `get_aliases()`, but this is simpler.
-    for name in get_aliases(context).keys():
-        _execute_command_in_context(
-            context,
-            ["git", "config", *context.location_flags, "--unset-all", "alias." + name],
-            check=True,
-        )
-
-
-def execute_git(
-    context: "GitExecutionContext",
-    extra_arguments: Sequence[str],
-    *,
-    combine_output: bool = False,
-    check: bool = False,
-) -> subprocess.CompletedProcess[str]:
-    return _execute_command_in_context(
-        context,
-        [*context.base_command, *context.location_flags, *extra_arguments],
-        combine_output=combine_output,
-        check=check,
-    )
-
-
-def _execute_command_in_context(
-    context: "GitExecutionContext",
-    command: Sequence[str],
-    *,
-    combine_output: bool = False,
-    check: bool = False,
-) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        command,
-        cwd=context.base_dir,
-        env=context.env,
-        text=True,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT if combine_output else subprocess.PIPE,
-        check=check,
-    )
-
-
 def format_parameters(parameters: Mapping[str, Any]):
     return ", ".join(f"{name}={value}" for name, value in parameters.items())
-
-
-def get_aliases(context: "GitExecutionContext") -> Mapping[str, str]:
-    aliases = {}
-
-    try:
-        result = _execute_command_in_context(
-            context,
-            [
-                "git",
-                "config",
-                *context.location_flags,
-                "--null",
-                "--get-regex",
-                "^alias\\.",
-            ],
-            check=True,
-        )
-
-        for alias in filter(None, result.stdout.split("\0")):
-            name, command = alias.split("\n", 1)
-
-            # Strip the first six characters (always "alias.") from the names.
-            aliases[name[6:]] = command
-    except subprocess.CalledProcessError as ex:
-        # A return code of 1 just means that no aliases were defined.
-        if ex.returncode != 1:
-            raise
-
-    return aliases
 
 
 def get_parameter_matrix(
@@ -209,7 +125,7 @@ class GitExecutionContext:
             ),
         }
 
-        _execute_command_in_context(self, ["git", "init", str(self.repo_dir)])
+        self._execute_command(["git", "init", str(self.repo_dir)])
 
     @classmethod
     def cleanup(cls, temp_dir: Path) -> None:
@@ -222,6 +138,87 @@ class GitExecutionContext:
         print(
             f"Failed to fully clean up temporary directory '{path}'.", file=sys.stderr
         )
+
+    def add_aliases(self, aliases: Mapping[str, str]) -> None:
+        for name, contents in aliases.items():
+            self._execute_command(
+                ["git", "config", *self.location_flags, "alias." + name, contents],
+                check=True,
+            )
+
+    def clear_aliases(self) -> None:
+        # We could run `git config --name-only` rather than picking the keys off
+        # `get_aliases()`, but this is simpler.
+        for name in self.get_aliases().keys():
+            self._execute_command(
+                [
+                    "git",
+                    "config",
+                    *self.location_flags,
+                    "--unset-all",
+                    "alias." + name,
+                ],
+                check=True,
+            )
+
+    def execute_git(
+        self,
+        extra_arguments: Sequence[str],
+        *,
+        combine_output: bool = False,
+        check: bool = False,
+    ) -> subprocess.CompletedProcess[str]:
+        return self._execute_command(
+            [*self.base_command, *self.location_flags, *extra_arguments],
+            combine_output=combine_output,
+            check=check,
+        )
+
+    def _execute_command(
+        self,
+        command: Sequence[str],
+        *,
+        combine_output: bool = False,
+        check: bool = False,
+    ) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            command,
+            cwd=self.base_dir,
+            env=self.env,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT if combine_output else subprocess.PIPE,
+            check=check,
+        )
+
+    def get_aliases(self) -> Mapping[str, str]:
+        aliases = {}
+
+        try:
+            result = self._execute_command(
+                [
+                    "git",
+                    "config",
+                    *self.location_flags,
+                    "--null",
+                    "--get-regex",
+                    "^alias\\.",
+                ],
+                check=True,
+            )
+
+            for alias in filter(None, result.stdout.split("\0")):
+                name, command = alias.split("\n", 1)
+
+                # Strip the first six characters (always "alias.") from the names.
+                aliases[name[6:]] = command
+        except subprocess.CalledProcessError as ex:
+            # A return code of 1 just means that no aliases were defined.
+            if ex.returncode != 1:
+                raise
+
+        return aliases
 
 
 @dataclass
@@ -251,8 +248,7 @@ class TestCase:
     def run(self, report: "TestReport"):
         """Executes the test case."""
 
-        result = execute_git(
-            self.context,
+        result = self.context.execute_git(
             self.extra_arguments,
             combine_output=not isinstance(self.output, CommandOutput),
         )

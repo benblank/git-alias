@@ -7,8 +7,6 @@ from testlib import (
     GitExecutionContext,
     TestCase,
     TestSuite,
-    add_aliases,
-    clear_aliases,
     format_parameters,
     get_parameter_matrix,
 )
@@ -19,14 +17,14 @@ ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 
 def after_each(context: GitExecutionContext) -> Callable[[], None]:
     def after_each_impl() -> None:
-        clear_aliases(context)
+        context.clear_aliases()
 
     return after_each_impl
 
 
 def before_each(context: GitExecutionContext) -> Callable[[], None]:
     def before_each_impl() -> None:
-        add_aliases(context, ALIASES)
+        context.add_aliases(ALIASES)
 
     return before_each_impl
 
