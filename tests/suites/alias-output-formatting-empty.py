@@ -3,7 +3,7 @@ from dataclasses import replace
 from testlib import (
     COMMON_PARAMETERS,
     CommandOutput,
-    TestExecutionContext,
+    GitExecutionContext,
     TestCase,
     TestSuite,
     format_parameters,
@@ -20,13 +20,15 @@ def get_test_suite() -> TestSuite:
             for parameter in ["command-alias", "location-flags"]
         }
     ):
-        context = TestExecutionContext()
+        context = GitExecutionContext(
+            parameters["command-alias"], parameters["location-flags"]
+        )
 
         # Also used to construct the "default" test case.
         shell_flag = TestCase(
             "--shell flag",
             context,
-            [*parameters["command-alias"], *parameters["location-flags"], "--shell"],
+            ["--shell"],
             exit_code=0,
             output="",
         )
@@ -35,12 +37,7 @@ def get_test_suite() -> TestSuite:
         config_header_flags = TestCase(
             "--config --header flags",
             context,
-            [
-                *parameters["command-alias"],
-                *parameters["location-flags"],
-                "--config",
-                "--header",
-            ],
+            ["--config", "--header"],
             exit_code=0,
             output=CommandOutput(stdout="[alias]\n", stderr=""),
         )
@@ -49,12 +46,7 @@ def get_test_suite() -> TestSuite:
         json_pretty_flags = TestCase(
             "--json --pretty flags",
             context,
-            [
-                *parameters["command-alias"],
-                *parameters["location-flags"],
-                "--json",
-                "--pretty",
-            ],
+            ["--json", "--pretty"],
             exit_code=0,
             output=CommandOutput(stdout="{}\n", stderr=""),
         )
@@ -66,53 +58,32 @@ def get_test_suite() -> TestSuite:
                     replace(
                         shell_flag,
                         name="default",
-                        command_line=[
-                            *parameters["command-alias"],
-                            *parameters["location-flags"],
-                        ],
+                        extra_arguments=[],
                     ),
                     shell_flag,
                     replace(
                         config_header_flags,
                         name="--config flag",
-                        command_line=[
-                            *parameters["command-alias"],
-                            *parameters["location-flags"],
-                            "--config",
-                        ],
+                        extra_arguments=["--config"],
                     ),
                     config_header_flags,
                     TestCase(
                         "--config --no-header flags",
                         context,
-                        [
-                            *parameters["command-alias"],
-                            *parameters["location-flags"],
-                            "--config",
-                            "--no-header",
-                        ],
+                        ["--config", "--no-header"],
                         exit_code=0,
                         output="",
                     ),
                     replace(
                         json_pretty_flags,
                         name="--json flag",
-                        command_line=[
-                            *parameters["command-alias"],
-                            *parameters["location-flags"],
-                            "--json",
-                        ],
+                        extra_arguments=["--json"],
                     ),
                     json_pretty_flags,
                     TestCase(
                         "--json --compact flags",
                         context,
-                        [
-                            *parameters["command-alias"],
-                            *parameters["location-flags"],
-                            "--json",
-                            "--compact",
-                        ],
+                        ["--json", "--compact"],
                         exit_code=0,
                         output=CommandOutput(stdout="{}", stderr=""),
                     ),

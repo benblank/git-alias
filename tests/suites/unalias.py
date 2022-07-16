@@ -1,8 +1,9 @@
-from typing import Callable, Sequence
+from typing import Callable
+
 from testlib import (
     COMMON_PARAMETERS,
     TestCase,
-    TestExecutionContext,
+    GitExecutionContext,
     TestSuite,
     add_aliases,
     clear_aliases,
@@ -14,63 +15,53 @@ from testlib import (
 ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 
 
-def after_each(
-    context: TestExecutionContext, location_flags: Sequence[str]
-) -> Callable[[], None]:
+def after_each(context: GitExecutionContext) -> Callable[[], None]:
     def after_each_impl() -> None:
-        clear_aliases(context, location_flags)
+        clear_aliases(context)
 
     return after_each_impl
 
 
-def before_each(
-    context: TestExecutionContext, location_flags: Sequence[str]
-) -> Callable[[], None]:
+def before_each(context: GitExecutionContext) -> Callable[[], None]:
     def before_each_impl() -> None:
-        add_aliases(context, location_flags, ALIASES)
+        add_aliases(context, ALIASES)
 
     return before_each_impl
 
 
 def get_test_suite() -> TestSuite:
-    context = TestExecutionContext()
+    tests = []
 
-    return TestSuite(
-        "unalias: smoke tests",
-        [
+    for parameters in get_parameter_matrix(
+        {
+            parameter: COMMON_PARAMETERS[parameter]
+            for parameter in ["command-unalias", "location-flags"]
+        }
+    ):
+        context = GitExecutionContext(
+            parameters["command-unalias"], parameters["location-flags"]
+        )
+
+        tests.append(
             TestSuite(
                 f"with parameters {format_parameters(parameters)}",
                 [
                     TestCase(
                         "doesn't produce an error",
                         context,
-                        [
-                            *parameters["command-unalias"],
-                            *parameters["location-flags"],
-                            "foo",
-                        ],
+                        ["foo"],
                         exit_code=0,
                     ),
                     TestCase(
                         "doesn't produce an error with --dry-run",
                         context,
-                        [
-                            *parameters["command-unalias"],
-                            *parameters["location-flags"],
-                            "--dry-run",
-                            "foo",
-                        ],
+                        ["--dry-run", "foo"],
                         exit_code=0,
                     ),
                 ],
-                before_each=before_each(context, parameters["location-flags"]),
-                after_each=after_each(context, parameters["location-flags"]),
+                before_each=before_each(context),
+                after_each=after_each(context),
             )
-            for parameters in get_parameter_matrix(
-                {
-                    parameter: COMMON_PARAMETERS[parameter]
-                    for parameter in ["command-unalias", "location-flags"]
-                }
-            )
-        ],
-    )
+        )
+
+    return TestSuite("unalias: smoke tests", tests)

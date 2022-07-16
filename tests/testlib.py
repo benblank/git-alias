@@ -48,45 +48,78 @@ COMMON_PARAMETERS: Mapping[str, Iterable[Any]] = {
 }
 
 
-def add_aliases(
-    context: "TestExecutionContext",
-    location_flags: Sequence[str],
-    aliases: Mapping[str, str],
-) -> None:
+def add_aliases(context: "GitExecutionContext", aliases: Mapping[str, str]) -> None:
     for name, contents in aliases.items():
-        run_in_context(
+        _execute_command_in_context(
             context,
-            ["git", "config", *location_flags, "alias." + name, contents],
+            ["git", "config", *context.location_flags, "alias." + name, contents],
             check=True,
         )
 
 
-def clear_aliases(
-    context: "TestExecutionContext", location_flags: Sequence[str] = []
-) -> None:
+def clear_aliases(context: "GitExecutionContext") -> None:
     # We could run `git config --name-only` rather than picking the keys off
     # `get_aliases()`, but this is simpler.
-    for name in get_aliases(context, location_flags).keys():
-        run_in_context(
+    for name in get_aliases(context).keys():
+        _execute_command_in_context(
             context,
-            ["git", "config", *location_flags, "--unset-all", "alias." + name],
+            ["git", "config", *context.location_flags, "--unset-all", "alias." + name],
             check=True,
         )
+
+
+def execute_git(
+    context: "GitExecutionContext",
+    extra_arguments: Sequence[str],
+    *,
+    combine_output: bool = False,
+    check: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return _execute_command_in_context(
+        context,
+        [*context.base_command, *context.location_flags, *extra_arguments],
+        combine_output=combine_output,
+        check=check,
+    )
+
+
+def _execute_command_in_context(
+    context: "GitExecutionContext",
+    command: Sequence[str],
+    *,
+    combine_output: bool = False,
+    check: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        cwd=context.base_dir,
+        env=context.env,
+        text=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT if combine_output else subprocess.PIPE,
+        check=check,
+    )
 
 
 def format_parameters(parameters: Mapping[str, Any]):
     return ", ".join(f"{name}={value}" for name, value in parameters.items())
 
 
-def get_aliases(
-    context: "TestExecutionContext", location_flags: Sequence[str] = []
-) -> Mapping[str, str]:
+def get_aliases(context: "GitExecutionContext") -> Mapping[str, str]:
     aliases = {}
 
     try:
-        result = run_in_context(
+        result = _execute_command_in_context(
             context,
-            ["git", "config", *location_flags, "--null", "--get-regex", "^alias\\."],
+            [
+                "git",
+                "config",
+                *context.location_flags,
+                "--null",
+                "--get-regex",
+                "^alias\\.",
+            ],
             check=True,
         )
 
@@ -126,25 +159,6 @@ def get_parameter_matrix(
     )
 
 
-def run_in_context(
-    context: "TestExecutionContext",
-    command: Sequence[str],
-    *,
-    combine_output: bool = False,
-    check: bool = False,
-) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        command,
-        cwd=context.base_dir,
-        env=context.env,
-        text=True,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT if combine_output else subprocess.PIPE,
-        check=check,
-    )
-
-
 @dataclass(kw_only=True)
 class CommandOutput:
     """Represents the output command execution produces on stdout and strerr."""
@@ -153,68 +167,13 @@ class CommandOutput:
     stdout: str
 
 
-@dataclass
-class TestCase:
-    name: str
+class GitExecutionContext:
+    def __init__(
+        self, base_command: Sequence[str], location_flags: Sequence[str]
+    ) -> None:
+        self.base_command = base_command
+        self.location_flags = location_flags
 
-    context: "TestExecutionContext"
-
-    command_line: Sequence[str]
-    """The command and arguments to execute.
-
-    Because the first element specifies the command to run, it is an error to
-    provide an empty sequence.
-    """
-
-    exit_code: int | None = field(default=None, kw_only=True)
-    """If set, the exit code expected from executing `command_line`.
-
-    If unset, the exit code will be ignored.
-    """
-
-    output: str | CommandOutput | None = field(default=None, kw_only=True)
-    """If set, the expected output from executing `command_line`.
-
-    Use a string to velidate the combined output (stdout and stderr). Use a
-    `CommandOutput` to validate them individually.
-
-    If unset, the output will be ignored.
-    """
-
-    def run(self, report: "TestReport"):
-        """Executes the test case."""
-
-        result = run_in_context(
-            self.context,
-            self.command_line,
-            combine_output=not isinstance(self.output, CommandOutput),
-        )
-
-        if self.exit_code is not None and result.returncode != self.exit_code:
-            report.failures.append(
-                f"expected exit code {self.exit_code}, but got {result.returncode}"
-            )
-
-        if self.output is not None:
-            if isinstance(self.output, CommandOutput):
-                if result.stdout != self.output.stdout:
-                    report.failures.append(
-                        f"expected {repr(self.output.stdout)} on stdout, but got {repr(result.stdout)}"
-                    )
-
-                if result.stderr != self.output.stderr:
-                    report.failures.append(
-                        f"expected {repr(self.output.stderr)} on stderr, but got {repr(result.stderr)}"
-                    )
-            else:
-                if result.stdout != self.output:
-                    report.failures.append(
-                        f"expected {repr(self.output)} as output, but got {repr(result.stdout)}"
-                    )
-
-
-class TestExecutionContext:
-    def __init__(self) -> None:
         # Ensure _TEMP_ROOT exists, so that temporary directories can be created
         # in it.
         os.makedirs(_TEMP_ROOT, exist_ok=True)
@@ -223,7 +182,7 @@ class TestExecutionContext:
         # issues a warning when cleaning up due to garbage collection.
         self.base_dir = Path(tempfile.mkdtemp(dir=_TEMP_ROOT))
         self._finalizer = weakref.finalize(
-            self, TestExecutionContext.cleanup, self.base_dir
+            self, GitExecutionContext.cleanup, self.base_dir
         )
 
         self.bin_dir = self.base_dir / "bin"
@@ -250,11 +209,11 @@ class TestExecutionContext:
             ),
         }
 
-        run_in_context(self, ["git", "init", str(self.repo_dir)])
+        _execute_command_in_context(self, ["git", "init", str(self.repo_dir)])
 
     @classmethod
     def cleanup(cls, temp_dir: Path) -> None:
-        shutil.rmtree(temp_dir, onerror=TestExecutionContext._on_cleanup_error)
+        shutil.rmtree(temp_dir, onerror=GitExecutionContext._on_cleanup_error)
 
     @classmethod
     def _on_cleanup_error(cls, function, path: str, exception_info) -> None:
@@ -263,6 +222,62 @@ class TestExecutionContext:
         print(
             f"Failed to fully clean up temporary directory '{path}'.", file=sys.stderr
         )
+
+
+@dataclass
+class TestCase:
+    name: str
+
+    context: "GitExecutionContext"
+
+    extra_arguments: Sequence[str]
+    """Extra arguments to add to the command line when executing it."""
+
+    exit_code: int | None = field(default=None, kw_only=True)
+    """If set, the exit code expected from executing Git.
+
+    If unset, the exit code will be ignored.
+    """
+
+    output: str | CommandOutput | None = field(default=None, kw_only=True)
+    """If set, the expected output from executing Git.
+
+    Use a string to velidate the combined output (stdout and stderr). Use a
+    `CommandOutput` to validate them individually.
+
+    If unset, the output will be ignored.
+    """
+
+    def run(self, report: "TestReport"):
+        """Executes the test case."""
+
+        result = execute_git(
+            self.context,
+            self.extra_arguments,
+            combine_output=not isinstance(self.output, CommandOutput),
+        )
+
+        if self.exit_code is not None and result.returncode != self.exit_code:
+            report.failures.append(
+                f"expected exit code {self.exit_code}, but got {result.returncode}"
+            )
+
+        if self.output is not None:
+            if isinstance(self.output, CommandOutput):
+                if result.stdout != self.output.stdout:
+                    report.failures.append(
+                        f"expected {repr(self.output.stdout)} on stdout, but got {repr(result.stdout)}"
+                    )
+
+                if result.stderr != self.output.stderr:
+                    report.failures.append(
+                        f"expected {repr(self.output.stderr)} on stderr, but got {repr(result.stderr)}"
+                    )
+            else:
+                if result.stdout != self.output:
+                    report.failures.append(
+                        f"expected {repr(self.output)} as output, but got {repr(result.stdout)}"
+                    )
 
 
 # We probably shouldn't be using `frozen=True` here, as the `init=False` fields
