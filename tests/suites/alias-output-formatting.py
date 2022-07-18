@@ -5,12 +5,11 @@ from testlib import (
     COMMON_PARAMETERS,
     CommandOutput,
     GitExecutionContext,
-    TestCase,
-    TestSuite,
+    Suite,
+    Test,
     format_parameters,
     get_parameter_matrix,
 )
-
 
 ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 
@@ -29,7 +28,7 @@ def before_each(context: GitExecutionContext) -> Callable[[], None]:
     return before_each_impl
 
 
-def get_test_suite() -> TestSuite:
+def get_suite() -> Suite:
     tests = []
 
     for parameters in get_parameter_matrix(
@@ -43,7 +42,7 @@ def get_test_suite() -> TestSuite:
         )
 
         # Also used to construct the "default" test case.
-        shell_flag = TestCase(
+        shell_flag = Test(
             "--shell flag",
             context,
             ["--shell"],
@@ -57,7 +56,7 @@ def get_test_suite() -> TestSuite:
         )
 
         # Also used to construct the "--config" test case.
-        config_header_flags = TestCase(
+        config_header_flags = Test(
             "--config --header flags",
             context,
             ["--config", "--header"],
@@ -72,7 +71,7 @@ def get_test_suite() -> TestSuite:
         )
 
         # Also used to construct the "--json" test case.
-        json_pretty_flags = TestCase(
+        json_pretty_flags = Test(
             "--json --pretty flags",
             context,
             ["--json", "--pretty"],
@@ -88,7 +87,7 @@ def get_test_suite() -> TestSuite:
         )
 
         tests.append(
-            TestSuite(
+            Suite(
                 f"with parameters {format_parameters(parameters)}",
                 [
                     replace(
@@ -103,7 +102,7 @@ def get_test_suite() -> TestSuite:
                         extra_arguments=["--config"],
                     ),
                     config_header_flags,
-                    TestCase(
+                    Test(
                         "--config --no-header flags",
                         context,
                         ["--config", "--no-header"],
@@ -121,7 +120,7 @@ def get_test_suite() -> TestSuite:
                         extra_arguments=["--json"],
                     ),
                     json_pretty_flags,
-                    TestCase(
+                    Test(
                         "--json --compact flags",
                         context,
                         ["--json", "--compact"],
@@ -137,4 +136,4 @@ def get_test_suite() -> TestSuite:
             )
         )
 
-    return TestSuite("alias: output formatting", tests)
+    return Suite("alias: output formatting", tests)

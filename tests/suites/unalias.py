@@ -2,13 +2,12 @@ from typing import Callable
 
 from testlib import (
     COMMON_PARAMETERS,
-    TestCase,
     GitExecutionContext,
-    TestSuite,
+    Suite,
+    Test,
     format_parameters,
     get_parameter_matrix,
 )
-
 
 ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 
@@ -27,7 +26,7 @@ def before_each(context: GitExecutionContext) -> Callable[[], None]:
     return before_each_impl
 
 
-def get_test_suite() -> TestSuite:
+def get_suite() -> Suite:
     tests = []
 
     for parameters in get_parameter_matrix(
@@ -41,16 +40,16 @@ def get_test_suite() -> TestSuite:
         )
 
         tests.append(
-            TestSuite(
+            Suite(
                 f"with parameters {format_parameters(parameters)}",
                 [
-                    TestCase(
+                    Test(
                         "doesn't produce an error",
                         context,
                         ["foo"],
                         exit_code=0,
                     ),
-                    TestCase(
+                    Test(
                         "doesn't produce an error with --dry-run",
                         context,
                         ["--dry-run", "foo"],
@@ -62,4 +61,4 @@ def get_test_suite() -> TestSuite:
             )
         )
 
-    return TestSuite("unalias: smoke tests", tests)
+    return Suite("unalias: smoke tests", tests)

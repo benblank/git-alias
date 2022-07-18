@@ -221,66 +221,11 @@ class GitExecutionContext:
         return aliases
 
 
-@dataclass
-class TestCase:
-    name: str
-
-    context: "GitExecutionContext"
-
-    extra_arguments: Sequence[str]
-    """Extra arguments to add to the command line when executing it."""
-
-    exit_code: int | None = field(default=None, kw_only=True)
-    """If set, the exit code expected from executing Git.
-
-    If unset, the exit code will be ignored.
-    """
-
-    output: str | CommandOutput | None = field(default=None, kw_only=True)
-    """If set, the expected output from executing Git.
-
-    Use a string to velidate the combined output (stdout and stderr). Use a
-    `CommandOutput` to validate them individually.
-
-    If unset, the output will be ignored.
-    """
-
-    def run(self, report: "TestReport"):
-        """Executes the test case."""
-
-        result = self.context.execute_git(
-            self.extra_arguments,
-            combine_output=not isinstance(self.output, CommandOutput),
-        )
-
-        if self.exit_code is not None and result.returncode != self.exit_code:
-            report.failures.append(
-                f"expected exit code {self.exit_code}, but got {result.returncode}"
-            )
-
-        if self.output is not None:
-            if isinstance(self.output, CommandOutput):
-                if result.stdout != self.output.stdout:
-                    report.failures.append(
-                        f"expected {repr(self.output.stdout)} on stdout, but got {repr(result.stdout)}"
-                    )
-
-                if result.stderr != self.output.stderr:
-                    report.failures.append(
-                        f"expected {repr(self.output.stderr)} on stderr, but got {repr(result.stderr)}"
-                    )
-            else:
-                if result.stdout != self.output:
-                    report.failures.append(
-                        f"expected {repr(self.output)} as output, but got {repr(result.stdout)}"
-                    )
-
-
 # We probably shouldn't be using `frozen=True` here, as the `init=False` fields
 # are themselves mutable, but it at least prevents any of the fields from being
 # reassigned.
 @dataclass(frozen=True)
-class TestReport(AbstractContextManager):
+class Report(AbstractContextManager):
     @dataclass(kw_only=True)
     class Counts:
         tests: int = 0
@@ -288,8 +233,8 @@ class TestReport(AbstractContextManager):
         failures: int = 0
         errors: int = 0
 
-        def __add__(self, other: "TestReport.Counts") -> "TestReport.Counts":
-            return TestReport.Counts(
+        def __add__(self, other: "Report.Counts") -> "Report.Counts":
+            return Report.Counts(
                 tests=self.tests + other.tests,
                 successes=self.successes + other.successes,
                 failures=self.failures + other.failures,
@@ -301,14 +246,14 @@ class TestReport(AbstractContextManager):
         FAILURE = enum.auto()
         ERROR = enum.auto()
 
-        def __add__(self, other: "TestReport.Status") -> "TestReport.Status":
-            if self == TestReport.Status.ERROR or other == TestReport.Status.ERROR:
-                return TestReport.Status.ERROR
+        def __add__(self, other: "Report.Status") -> "Report.Status":
+            if self == Report.Status.ERROR or other == Report.Status.ERROR:
+                return Report.Status.ERROR
 
-            if self == TestReport.Status.FAILURE or other == TestReport.Status.FAILURE:
-                return TestReport.Status.FAILURE
+            if self == Report.Status.FAILURE or other == Report.Status.FAILURE:
+                return Report.Status.FAILURE
 
-            return TestReport.Status.SUCCESS
+            return Report.Status.SUCCESS
 
     __icons: ClassVar[dict[Status, str]] = {
         Status.SUCCESS: "✔ ",
@@ -318,10 +263,10 @@ class TestReport(AbstractContextManager):
     __indent: ClassVar[str] = "  "
 
     title: str
-    parent: "TestReport | None" = None
+    parent: "Report | None" = None
     show_successful: bool = field(default=True, kw_only=True)
 
-    __children: list["TestReport"] = field(default_factory=list, init=False)
+    __children: list["Report"] = field(default_factory=list, init=False)
     errors: list[str | list[str]] = field(default_factory=list, init=False)
     failures: list[str | list[str]] = field(default_factory=list, init=False)
 
@@ -371,7 +316,7 @@ class TestReport(AbstractContextManager):
         is_failure = not is_error and bool(self.failures)
         is_success = is_test and not is_failure and not is_error
 
-        own_counts = TestReport.Counts(
+        own_counts = Report.Counts(
             tests=int(is_test),
             successes=int(is_success),
             failures=int(is_failure),
@@ -381,13 +326,13 @@ class TestReport(AbstractContextManager):
         if self.__children:
             return own_counts + sum(
                 (child.counts for child in self.__children),
-                start=TestReport.Counts(),
+                start=Report.Counts(),
             )
 
         return own_counts
 
-    def create_child_report(self, for_: "TestCase | TestSuite") -> "TestReport":
-        child = TestReport(for_.name, self, show_successful=self.show_successful)
+    def create_child_report(self, for_: "Test | Suite") -> "Report":
+        child = Report(for_.name, self, show_successful=self.show_successful)
 
         self.__children.append(child)
 
@@ -407,43 +352,37 @@ class TestReport(AbstractContextManager):
 
     # TODO? make sure this is only called after the report is "finished"
     def print(self):
-        if self.show_successful or self.status is not TestReport.Status.SUCCESS:
+        if self.show_successful or self.status is not Report.Status.SUCCESS:
             self.__println(
-                TestReport.__icons[self.status]
+                Report.__icons[self.status]
                 + ("Untitled block" if self.title is None else self.title)
             )
 
         for failure in self.failures:
             if isinstance(failure, str):
                 self.__println(
-                    TestReport.__indent
-                    + self.__icons[TestReport.Status.FAILURE]
-                    + failure
+                    Report.__indent + self.__icons[Report.Status.FAILURE] + failure
                 )
             else:
                 self.__println(
-                    TestReport.__indent
-                    + self.__icons[TestReport.Status.FAILURE]
-                    + failure[0]
+                    Report.__indent + self.__icons[Report.Status.FAILURE] + failure[0]
                 )
 
                 for line in failure[1:]:
-                    self.__println(TestReport.__indent * 2 + line)
+                    self.__println(Report.__indent * 2 + line)
 
         for error in self.errors:
             if isinstance(error, str):
                 self.__println(
-                    TestReport.__indent + self.__icons[TestReport.Status.ERROR] + error
+                    Report.__indent + self.__icons[Report.Status.ERROR] + error
                 )
             else:
                 self.__println(
-                    TestReport.__indent
-                    + self.__icons[TestReport.Status.ERROR]
-                    + error[0]
+                    Report.__indent + self.__icons[Report.Status.ERROR] + error[0]
                 )
 
                 for line in error[1:]:
-                    self.__println(TestReport.__indent * 2 + line)
+                    self.__println(Report.__indent * 2 + line)
 
         for child in self.__children:
             child.print()
@@ -452,38 +391,38 @@ class TestReport(AbstractContextManager):
         if self.parent is None:
             print(line)
         else:
-            self.parent.__println(TestReport.__indent + line)
+            self.parent.__println(Report.__indent + line)
 
     # TODO? make sure this is only called after the report is "finished" and cache it
     @property
     def status(self) -> Status:
         own_status = (
-            TestReport.Status.ERROR
+            Report.Status.ERROR
             if self.errors
-            else TestReport.Status.FAILURE
+            else Report.Status.FAILURE
             if self.failures
-            else TestReport.Status.SUCCESS
+            else Report.Status.SUCCESS
         )
 
         if self.__children:
             return own_status + sum(
                 (child.status for child in self.__children),
-                start=TestReport.Status.SUCCESS,
+                start=Report.Status.SUCCESS,
             )
 
         return own_status
 
 
 @dataclass
-class TestSuite:
+class Suite:
     name: str
-    tests: Iterable["TestCase | TestSuite"]
+    tests: Iterable["Test | Suite"]
     before_all: Callable[[], None] = field(default=lambda: None, kw_only=True)
     before_each: Callable[[], None] = field(default=lambda: None, kw_only=True)
     after_each: Callable[[], None] = field(default=lambda: None, kw_only=True)
     after_all: Callable[[], None] = field(default=lambda: None, kw_only=True)
 
-    def run(self, report: TestReport) -> None:
+    def run(self, report: Report) -> None:
         try:
             self.before_all()
         except Exception:
@@ -511,3 +450,58 @@ class TestSuite:
             self.after_all()
         except Exception:
             report.add_exception("Exception occurred in after_all.", *sys.exc_info())
+
+
+@dataclass
+class Test:
+    name: str
+
+    context: GitExecutionContext
+
+    extra_arguments: Sequence[str]
+    """Extra arguments to add to the command line when executing it."""
+
+    exit_code: int | None = field(default=None, kw_only=True)
+    """If set, the exit code expected from executing Git.
+
+    If unset, the exit code will be ignored.
+    """
+
+    output: str | CommandOutput | None = field(default=None, kw_only=True)
+    """If set, the expected output from executing Git.
+
+    Use a string to velidate the combined output (stdout and stderr). Use a
+    `CommandOutput` to validate them individually.
+
+    If unset, the output will be ignored.
+    """
+
+    def run(self, report: Report):
+        """Executes the test case."""
+
+        result = self.context.execute_git(
+            self.extra_arguments,
+            combine_output=not isinstance(self.output, CommandOutput),
+        )
+
+        if self.exit_code is not None and result.returncode != self.exit_code:
+            report.failures.append(
+                f"expected exit code {self.exit_code}, but got {result.returncode}"
+            )
+
+        if self.output is not None:
+            if isinstance(self.output, CommandOutput):
+                if result.stdout != self.output.stdout:
+                    report.failures.append(
+                        f"expected {repr(self.output.stdout)} on stdout, but got {repr(result.stdout)}"
+                    )
+
+                if result.stderr != self.output.stderr:
+                    report.failures.append(
+                        f"expected {repr(self.output.stderr)} on stderr, but got {repr(result.stderr)}"
+                    )
+            else:
+                if result.stdout != self.output:
+                    report.failures.append(
+                        f"expected {repr(self.output)} as output, but got {repr(result.stdout)}"
+                    )

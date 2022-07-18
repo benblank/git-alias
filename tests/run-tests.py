@@ -8,7 +8,7 @@ import sys
 from types import ModuleType
 from typing import Iterable
 
-from testlib import TestReport, TestSuite
+from testlib import Report, Suite
 
 
 tests_root = (Path.cwd() / Path(__file__)).resolve().parent
@@ -36,17 +36,17 @@ def load_module_from_path(module_name: str, module_path: Path) -> ModuleType:
     return module
 
 
-def load_suite(suite_path: Path) -> TestSuite:
+def load_suite(suite_path: Path) -> Suite:
     if not suite_path.is_absolute():
         suite_path = suite_path.resolve()
 
     module_name = module_name_from_path(suite_path.relative_to(tests_root))
     module = load_module_from_path(module_name, suite_path)
 
-    return module.get_test_suite()
+    return module.get_suite()
 
 
-def load_suites(root: Path) -> list[TestSuite]:
+def load_suites(root: Path) -> list[Suite]:
     suites = []
 
     for entry in root.iterdir():
@@ -63,7 +63,7 @@ def load_suites(root: Path) -> list[TestSuite]:
 
 
 def run_suites(module_paths: Iterable[str], *, show_successful: bool) -> bool:
-    suites: list[TestSuite] = []
+    suites: list[Suite] = []
     cwd = Path.cwd()
 
     for module_path in module_paths:
@@ -77,12 +77,12 @@ def run_suites(module_paths: Iterable[str], *, show_successful: bool) -> bool:
     reports = []
 
     for suite in suites:
-        with TestReport(suite.name, show_successful=show_successful) as report:
+        with Report(suite.name, show_successful=show_successful) as report:
             reports.append(report)
             suite.run(report)
             report.print()
 
-    counts = sum((report.counts for report in reports), start=TestReport.Counts())
+    counts = sum((report.counts for report in reports), start=Report.Counts())
 
     print(
         f"Ran {counts.tests} total test(s) from {len(suites)} file(s)."
@@ -90,7 +90,7 @@ def run_suites(module_paths: Iterable[str], *, show_successful: bool) -> bool:
         f" and {counts.errors} produced an error."
     )
 
-    return report.status is TestReport.Status.SUCCESS
+    return report.status is Report.Status.SUCCESS
 
 
 if __name__ == "__main__":
