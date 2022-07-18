@@ -461,6 +461,9 @@ class Test:
     extra_arguments: Sequence[str]
     """Extra arguments to add to the command line when executing it."""
 
+    define_aliases: Mapping[str, str] = field(default_factory=dict, kw_only=True)
+    """Aliases to create prior to running the test case."""
+
     exit_code: int | None = field(default=None, kw_only=True)
     """If set, the exit code expected from executing Git.
 
@@ -476,8 +479,19 @@ class Test:
     If unset, the output will be ignored.
     """
 
+    aliases: Mapping[str, str] | None = field(default=None, kw_only=True)
+    """The aliases which must be present after the test case has executed.
+
+    Note that *all* aliases defined in the execution context must be present in
+    `aliases_after` **and** that *all* aliases in `aliases_after` must be
+    defined in the execution context.
+    """
+
     def run(self, report: Report):
         """Executes the test case."""
+
+        if self.define_aliases:
+            self.context.add_aliases(self.define_aliases)
 
         result = self.context.execute_git(
             self.extra_arguments,
@@ -505,3 +519,13 @@ class Test:
                     report.failures.append(
                         f"expected {repr(self.output)} as output, but got {repr(result.stdout)}"
                     )
+
+        if self.aliases is not None:
+            aliases = self.context.get_aliases()
+
+            if aliases != self.aliases:
+                report.failures.append(
+                    f"expected aliases {repr(self.aliases)}, but found {repr(aliases)}"
+                )
+
+        self.context.clear_aliases()

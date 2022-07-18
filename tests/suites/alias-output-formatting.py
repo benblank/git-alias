@@ -1,5 +1,4 @@
 from dataclasses import replace
-from typing import Callable
 
 from testlib import (
     COMMON_PARAMETERS,
@@ -12,20 +11,6 @@ from testlib import (
 )
 
 ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
-
-
-def after_each(context: GitExecutionContext) -> Callable[[], None]:
-    def after_each_impl() -> None:
-        context.clear_aliases()
-
-    return after_each_impl
-
-
-def before_each(context: GitExecutionContext) -> Callable[[], None]:
-    def before_each_impl() -> None:
-        context.add_aliases(ALIASES)
-
-    return before_each_impl
 
 
 def get_suite() -> Suite:
@@ -46,6 +31,7 @@ def get_suite() -> Suite:
             "--shell flag",
             context,
             ["--shell"],
+            define_aliases=ALIASES,
             exit_code=0,
             output=CommandOutput(
                 stdout="git alias foo 'diff'\n"
@@ -60,6 +46,7 @@ def get_suite() -> Suite:
             "--config --header flags",
             context,
             ["--config", "--header"],
+            define_aliases=ALIASES,
             exit_code=0,
             output=CommandOutput(
                 stdout="[alias]\n"
@@ -75,6 +62,7 @@ def get_suite() -> Suite:
             "--json --pretty flags",
             context,
             ["--json", "--pretty"],
+            define_aliases=ALIASES,
             exit_code=0,
             output=CommandOutput(
                 stdout="{\n"
@@ -106,6 +94,7 @@ def get_suite() -> Suite:
                         "--config --no-header flags",
                         context,
                         ["--config", "--no-header"],
+                        define_aliases=ALIASES,
                         exit_code=0,
                         output=CommandOutput(
                             stdout='foo = "diff"\n'
@@ -124,6 +113,7 @@ def get_suite() -> Suite:
                         "--json --compact flags",
                         context,
                         ["--json", "--compact"],
+                        define_aliases=ALIASES,
                         exit_code=0,
                         output=CommandOutput(
                             stdout='{"foo":"diff","ml":"!echo foo\\necho bar","func":"!f() {}; f"}',
@@ -131,8 +121,6 @@ def get_suite() -> Suite:
                         ),
                     ),
                 ],
-                before_each=before_each(context),
-                after_each=after_each(context),
             )
         )
 

@@ -1,5 +1,3 @@
-from typing import Callable
-
 from testlib import (
     COMMON_PARAMETERS,
     GitExecutionContext,
@@ -10,20 +8,6 @@ from testlib import (
 )
 
 ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
-
-
-def after_each(context: GitExecutionContext) -> Callable[[], None]:
-    def after_each_impl() -> None:
-        context.clear_aliases()
-
-    return after_each_impl
-
-
-def before_each(context: GitExecutionContext) -> Callable[[], None]:
-    def before_each_impl() -> None:
-        context.add_aliases(ALIASES)
-
-    return before_each_impl
 
 
 def get_suite() -> Suite:
@@ -44,20 +28,22 @@ def get_suite() -> Suite:
                 f"with parameters {format_parameters(parameters)}",
                 [
                     Test(
-                        "doesn't produce an error",
+                        "removes only the named alias",
                         context,
                         ["foo"],
+                        define_aliases=ALIASES,
                         exit_code=0,
+                        aliases={name: ALIASES[name] for name in ["ml", "func"]},
                     ),
                     Test(
-                        "doesn't produce an error with --dry-run",
+                        "doesn't remove aliases with --dry-run",
                         context,
                         ["--dry-run", "foo"],
+                        define_aliases=ALIASES,
                         exit_code=0,
+                        aliases=ALIASES,
                     ),
                 ],
-                before_each=before_each(context),
-                after_each=after_each(context),
             )
         )
 
