@@ -1,11 +1,11 @@
 from typing import Callable, Sequence
 from testlib import (
+    COMMON_PARAMETERS,
     TestCase,
     TestExecutionContext,
     TestSuite,
     add_aliases,
     clear_aliases,
-    common_parameters,
     format_parameters,
     get_parameter_matrix,
 )
@@ -68,7 +68,7 @@ def get_test_suite() -> TestSuite:
             )
             for parameters in get_parameter_matrix(
                 {
-                    parameter: common_parameters[parameter]
+                    parameter: COMMON_PARAMETERS[parameter]
                     for parameter in ["command-unalias", "location-flags"]
                 }
             )

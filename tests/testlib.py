@@ -1,5 +1,7 @@
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
-from itertools import product, starmap
+import enum
+import itertools
 import os
 import os.path
 from pathlib import Path
@@ -8,17 +10,25 @@ import subprocess
 import sys
 import tempfile
 import traceback
-from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
+from types import TracebackType
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+    Type,
+)
 import weakref
 
 
-_INDENT = "  "
 _TESTS_DIR = (Path.cwd() / Path(__file__)).resolve().parent
 _SCRIPTS_DIR = _TESTS_DIR.parent
 _TEMP_ROOT = _TESTS_DIR / "tmp"
 
-
-common_parameters: Mapping[str, Iterable[Any]] = {
+COMMON_PARAMETERS: Mapping[str, Iterable[Any]] = {
     "command-alias": [
         ["git", "alias-abs"],
         ["git", "alias-rel"],
@@ -65,7 +75,7 @@ def clear_aliases(
 
 
 def format_parameters(parameters: Mapping[str, Any]):
-    return ", ".join(starmap(lambda name, value: f"{name}={value}", parameters.items()))
+    return ", ".join(f"{name}={value}" for name, value in parameters.items())
 
 
 def get_aliases(
@@ -105,14 +115,14 @@ def get_parameter_matrix(
     [{'a': 1, 'b': 4}, {'a': 1, 'b': 5}, {'a': 1, 'b': 6}, {'a': 2, 'b': 4}, {'a': 2, 'b': 5}, {'a': 2, 'b': 6}, {'a': 3, 'b': 4}, {'a': 3, 'b': 5}, {'a': 3, 'b': 6}]
     """
 
-    return map(
-        dict,
-        product(
-            *starmap(
-                lambda name, values: [(name, value) for value in values],
-                parameters.items(),
+    return (
+        dict(pairs)
+        for pairs in itertools.product(
+            *(
+                [(name, value) for value in values]
+                for name, values in parameters.items()
             )
-        ),
+        )
     )
 
 
@@ -171,14 +181,8 @@ class TestCase:
     If unset, the output will be ignored.
     """
 
-    def run(self, indent_level: int = 0) -> bool:
-        """Executes the test case.
-
-        A return value of True indicates success; False indicates failure. An
-        exception will be raised when an error occurs.
-        """
-
-        failed = False
+    def run(self, report: "TestReport"):
+        """Executes the test case."""
 
         result = run_in_context(
             self.context,
@@ -187,38 +191,26 @@ class TestCase:
         )
 
         if self.exit_code is not None and result.returncode != self.exit_code:
-            print(
-                f"{_INDENT * (indent_level + 1)}- expected exit code {self.exit_code}, but got {result.returncode}"
+            report.failures.append(
+                f"expected exit code {self.exit_code}, but got {result.returncode}"
             )
-
-            failed = True
 
         if self.output is not None:
             if isinstance(self.output, CommandOutput):
                 if result.stdout != self.output.stdout:
-                    print(
-                        f"{_INDENT * (indent_level + 1)}- expected {repr(self.output.stdout)} on stdout, but got {repr(result.stdout)}"
+                    report.failures.append(
+                        f"expected {repr(self.output.stdout)} on stdout, but got {repr(result.stdout)}"
                     )
-
-                    failed = True
 
                 if result.stderr != self.output.stderr:
-                    print(
-                        f"{_INDENT * (indent_level + 1)}- expected {repr(self.output.stderr)} on stderr, but got {repr(result.stderr)}"
+                    report.failures.append(
+                        f"expected {repr(self.output.stderr)} on stderr, but got {repr(result.stderr)}"
                     )
-
-                    failed = True
             else:
                 if result.stdout != self.output:
-                    print(
-                        f"{_INDENT * (indent_level + 1)}- expected {repr(self.output)} as output, but got {repr(result.stdout)}"
+                    report.failures.append(
+                        f"expected {repr(self.output)} as output, but got {repr(result.stdout)}"
                     )
-
-                    failed = True
-
-        print(f"{_INDENT * indent_level}{'❌' if failed else '✔'} {self.name}")
-
-        return not failed
 
 
 class TestExecutionContext:
@@ -273,38 +265,202 @@ class TestExecutionContext:
         )
 
 
-@dataclass(kw_only=True)
-class TestReport:
-    tests: int = 0
-    failures: int = 0
-    errors: int = 0
+# We probably shouldn't be using `frozen=True` here, as the `init=False` fields
+# are themselves mutable, but it at least prevents any of the fields from being
+# reassigned.
+@dataclass(frozen=True)
+class TestReport(AbstractContextManager):
+    @dataclass(kw_only=True)
+    class Counts:
+        tests: int = 0
+        successes: int = 0
+        failures: int = 0
+        errors: int = 0
 
-    def __add__(self, other: "TestReport | bool") -> "TestReport":
-        """Creates a new TestReport with summed values.
-
-        If `other` is a TestReport, each field is summed. If `other` is a
-        boolean, `tests` is incremented regardless of the value and `failures`
-        is incremented on False.
-        """
-
-        if isinstance(other, TestReport):
-            return TestReport(
+        def __add__(self, other: "TestReport.Counts") -> "TestReport.Counts":
+            return TestReport.Counts(
                 tests=self.tests + other.tests,
+                successes=self.successes + other.successes,
                 failures=self.failures + other.failures,
                 errors=self.errors + other.errors,
             )
 
-        if isinstance(other, bool):
-            return TestReport(
-                tests=self.tests + 1,
-                failures=self.failures + (not other),
-                errors=self.errors,
+    class Status(enum.Enum):
+        SUCCESS = enum.auto()
+        FAILURE = enum.auto()
+        ERROR = enum.auto()
+
+        def __add__(self, other: "TestReport.Status") -> "TestReport.Status":
+            if self == TestReport.Status.ERROR or other == TestReport.Status.ERROR:
+                return TestReport.Status.ERROR
+
+            if self == TestReport.Status.FAILURE or other == TestReport.Status.FAILURE:
+                return TestReport.Status.FAILURE
+
+            return TestReport.Status.SUCCESS
+
+    __icons: ClassVar[dict[Status, str]] = {
+        Status.SUCCESS: "✔ ",
+        Status.FAILURE: "❌ ",
+        Status.ERROR: "⚠️ ",
+    }
+    __indent: ClassVar[str] = "  "
+
+    title: str
+    parent: "TestReport | None" = None
+    show_successful: bool = field(default=True, kw_only=True)
+
+    __children: list["TestReport"] = field(default_factory=list, init=False)
+    errors: list[str | list[str]] = field(default_factory=list, init=False)
+    failures: list[str | list[str]] = field(default_factory=list, init=False)
+
+    def add_exception(
+        self,
+        description: str,
+        exc_type: Type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self.errors.append(
+            [
+                description,
+                # Each elememt in the list returned by `format_exception()`
+                # is actually one *or more* lines terminated by newline
+                # characters. We're going to add indentation and use
+                # `print()` later, so we need to convert it to one line per
+                # element, without newlines.
+                *(
+                    line
+                    for formatted in traceback.format_exception(
+                        exc_type, exc_val, exc_tb
+                    )
+                    for line in formatted.rstrip().split("\n")
+                ),
+            ]
+        )
+
+    # TODO? make sure this is only called after the report is "finished" and cache it
+    @property
+    def counts(self) -> Counts:
+        """Get the number of tests, successes, failures, and errors stored in
+        this result.
+
+        Only leaf nodes (those without children) are considered tests and can
+        therefore be successful. Non-tests are only *counted* as failed or
+        errored if they have failures or errors of their own (the failures and
+        errors of their children are counted only by those children).
+
+        It is therefore not guaranteed to be the case that `tests = successes +
+        failures + errors`, though that will be the case if only tests produce
+        failures or errors, which is typical.
+        """
+
+        is_test = not self.__children
+        is_error = bool(self.errors)
+        is_failure = not is_error and bool(self.failures)
+        is_success = is_test and not is_failure and not is_error
+
+        own_counts = TestReport.Counts(
+            tests=int(is_test),
+            successes=int(is_success),
+            failures=int(is_failure),
+            errors=int(is_error),
+        )
+
+        if self.__children:
+            return own_counts + sum(
+                (child.counts for child in self.__children),
+                start=TestReport.Counts(),
             )
 
-        raise NotImplementedError()
+        return own_counts
 
-    def successful(self) -> bool:
-        return self.failures == self.errors == 0
+    def create_child_report(self, for_: "TestCase | TestSuite") -> "TestReport":
+        child = TestReport(for_.name, self, show_successful=self.show_successful)
+
+        self.__children.append(child)
+
+        return child
+
+    def __exit__(
+        self,
+        exc_type: Type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> bool:
+        if exc_val is not None:
+            self.add_exception("Unhandled exception.", exc_type, exc_val, exc_tb)
+
+        # Don't swallow e.g. KeyboardInterrupt.
+        return exc_type is None or issubclass(exc_type, Exception)
+
+    # TODO? make sure this is only called after the report is "finished"
+    def print(self):
+        if self.show_successful or self.status is not TestReport.Status.SUCCESS:
+            self.__println(
+                TestReport.__icons[self.status]
+                + ("Untitled block" if self.title is None else self.title)
+            )
+
+        for failure in self.failures:
+            if isinstance(failure, str):
+                self.__println(
+                    TestReport.__indent
+                    + self.__icons[TestReport.Status.FAILURE]
+                    + failure
+                )
+            else:
+                self.__println(
+                    TestReport.__indent
+                    + self.__icons[TestReport.Status.FAILURE]
+                    + failure[0]
+                )
+
+                for line in failure[1:]:
+                    self.__println(TestReport.__indent * 2 + line)
+
+        for error in self.errors:
+            if isinstance(error, str):
+                self.__println(
+                    TestReport.__indent + self.__icons[TestReport.Status.ERROR] + error
+                )
+            else:
+                self.__println(
+                    TestReport.__indent
+                    + self.__icons[TestReport.Status.ERROR]
+                    + error[0]
+                )
+
+                for line in error[1:]:
+                    self.__println(TestReport.__indent * 2 + line)
+
+        for child in self.__children:
+            child.print()
+
+    def __println(self, line: str) -> None:
+        if self.parent is None:
+            print(line)
+        else:
+            self.parent.__println(TestReport.__indent + line)
+
+    # TODO? make sure this is only called after the report is "finished" and cache it
+    @property
+    def status(self) -> Status:
+        own_status = (
+            TestReport.Status.ERROR
+            if self.errors
+            else TestReport.Status.FAILURE
+            if self.failures
+            else TestReport.Status.SUCCESS
+        )
+
+        if self.__children:
+            return own_status + sum(
+                (child.status for child in self.__children),
+                start=TestReport.Status.SUCCESS,
+            )
+
+        return own_status
 
 
 @dataclass
@@ -316,33 +472,31 @@ class TestSuite:
     after_each: Callable[[], None] = field(default=lambda: None, kw_only=True)
     after_all: Callable[[], None] = field(default=lambda: None, kw_only=True)
 
-    def run(self, indent_level: int = 0) -> TestReport:
-        print(_INDENT * indent_level + "- " + self.name)
-
-        report = TestReport()
-
-        self.before_all()
+    def run(self, report: TestReport) -> None:
+        try:
+            self.before_all()
+        except Exception:
+            report.add_exception("Exception occurred in before_all.", *sys.exc_info())
 
         for test in self.tests:
-            self.before_each()
-
             try:
-                report += test.run(indent_level + 1)
+                self.before_each()
             except Exception:
-                print(
-                    "".join(
-                        map(
-                            lambda line: f"{_INDENT * (indent_level + 2)}{line}",
-                            traceback.format_exc(),
-                        )
-                    ),
-                    file=sys.stderr,
+                report.add_exception(
+                    "Exception occurred in before_each.", *sys.exc_info()
                 )
 
-                report += TestReport(tests=1, errors=1)
+            with report.create_child_report(test) as child_report:
+                test.run(child_report)
 
-            self.after_each()
+            try:
+                self.after_each()
+            except Exception:
+                report.add_exception(
+                    "Exception occurred in after_each.", *sys.exc_info()
+                )
 
-        self.after_all()
-
-        return report
+        try:
+            self.after_all()
+        except Exception:
+            report.add_exception("Exception occurred in after_all.", *sys.exc_info())
