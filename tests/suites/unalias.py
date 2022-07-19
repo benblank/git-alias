@@ -8,6 +8,7 @@ from testlib import (
     Test,
     format_parameters,
     get_parameter_matrix,
+    pick,
 )
 
 ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
@@ -18,10 +19,7 @@ def get_suite() -> Suite:
     tests = []
 
     for parameters in get_parameter_matrix(
-        {
-            parameter: COMMON_PARAMETERS[parameter]
-            for parameter in ["command-unalias", "location-flags"]
-        }
+        pick(COMMON_PARAMETERS, ["command-unalias", "location-flags"])
     ):
         context = GitExecutionContext(
             parameters["command-unalias"], parameters["location-flags"]
@@ -38,7 +36,7 @@ def get_suite() -> Suite:
                         define_aliases=ALIASES,
                         exit_code=0,
                         output=CommandOutput(stdout="'unset foo'\n", stderr=""),
-                        aliases={name: ALIASES[name] for name in ["ml", "func"]},
+                        aliases=pick(ALIASES, ["ml", "func"]),
                     ),
                     Test(
                         "supports wildcards",
@@ -49,7 +47,7 @@ def get_suite() -> Suite:
                         output=CommandOutput(
                             stdout="'unset foo'\n'unset func'\n", stderr=""
                         ),
-                        aliases={"ml": ALIASES["ml"]},
+                        aliases=pick(ALIASES, ["ml"]),
                     ),
                     Test(
                         "supports multiple parameters",
@@ -60,7 +58,7 @@ def get_suite() -> Suite:
                         output=CommandOutput(
                             stdout="'unset ml'\n'unset func'\n", stderr=""
                         ),
-                        aliases={"foo": ALIASES["foo"]},
+                        aliases=pick(ALIASES, ["foo"]),
                     ),
                     Test(
                         "complains when no patterns are provided",
@@ -81,7 +79,7 @@ def get_suite() -> Suite:
                             stdout="'unset foo'\n'unset func'\n",
                             stderr='No aliases matching "no-such-alias" were found.\n',
                         ),
-                        aliases={"ml": ALIASES["ml"]},
+                        aliases=pick(ALIASES, ["ml"]),
                     ),
                     Test(
                         "doesn't remove aliases with --dry-run",

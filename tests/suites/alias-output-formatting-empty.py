@@ -8,6 +8,7 @@ from testlib import (
     Test,
     format_parameters,
     get_parameter_matrix,
+    pick,
 )
 
 
@@ -15,10 +16,7 @@ def get_suite() -> Suite:
     tests = []
 
     for parameters in get_parameter_matrix(
-        {
-            parameter: COMMON_PARAMETERS[parameter]
-            for parameter in ["command-alias", "location-flags"]
-        }
+        pick(COMMON_PARAMETERS, ["command-alias", "location-flags"])
     ):
         context = GitExecutionContext(
             parameters["command-alias"], parameters["location-flags"]

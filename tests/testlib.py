@@ -21,9 +21,13 @@ from typing import (
     Mapping,
     Sequence,
     Type,
+    TypeVar,
 )
 import weakref
 
+
+K = TypeVar("K")
+V = TypeVar("V")
 
 _TESTS_DIR = (Path.cwd() / Path(__file__)).resolve().parent
 _SCRIPTS_DIR = _TESTS_DIR.parent
@@ -61,8 +65,8 @@ def _format_expected_output(expected: str | re.Pattern) -> str:
 
 
 def get_parameter_matrix(
-    parameters: Mapping[str, Iterable[Any]]
-) -> Iterator[Mapping[str, Any]]:
+    parameters: Mapping[K, Iterable[V]]
+) -> Iterator[Mapping[K, V]]:
     """Produce all possible combinations of parameter values.
 
     Accepts a mapping of parameter names to their possible values and returns an
@@ -88,6 +92,15 @@ def _is_valid_output(expected: str | re.Pattern, actual: str) -> bool:
         return expected.search(actual) is not None
 
     return expected == actual
+
+
+def pick(mapping: Mapping[K, V], keys: Iterable[K]) -> dict[K, V]:
+    """Filter a mapping such that only the specified keys are retained.
+
+    Note that all specified keys must exist on the mapping.
+    """
+
+    return {key: mapping[key] for key in keys}
 
 
 @dataclass(kw_only=True)
