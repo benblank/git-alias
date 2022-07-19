@@ -5,6 +5,7 @@ import itertools
 import os
 import os.path
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -52,6 +53,13 @@ def format_parameters(parameters: Mapping[str, Any]):
     return ", ".join(f"{name}={value}" for name, value in parameters.items())
 
 
+def _format_expected_output(expected: str | re.Pattern) -> str:
+    if isinstance(expected, re.Pattern):
+        return f"a string matching /{expected.pattern}/"
+
+    return repr(expected)
+
+
 def get_parameter_matrix(
     parameters: Mapping[str, Iterable[Any]]
 ) -> Iterator[Mapping[str, Any]]:
@@ -75,12 +83,19 @@ def get_parameter_matrix(
     )
 
 
+def _is_valid_output(expected: str | re.Pattern, actual: str) -> bool:
+    if isinstance(expected, re.Pattern):
+        return expected.search(actual) is not None
+
+    return expected == actual
+
+
 @dataclass(kw_only=True)
 class CommandOutput:
-    """Represents the output command execution produces on stdout and strerr."""
+    """Represents the output expected from a command on its stdout and strerr."""
 
-    stderr: str
-    stdout: str
+    stderr: str | re.Pattern
+    stdout: str | re.Pattern
 
 
 class GitExecutionContext:
@@ -470,11 +485,11 @@ class Test:
     If unset, the exit code will be ignored.
     """
 
-    output: str | CommandOutput | None = field(default=None, kw_only=True)
+    output: str | re.Pattern | CommandOutput | None = field(default=None, kw_only=True)
     """If set, the expected output from executing Git.
 
-    Use a string to velidate the combined output (stdout and stderr). Use a
-    `CommandOutput` to validate them individually.
+    Use a string or pattern to velidate the combined output (stdout and stderr).
+    Use `CommandOutput` to validate them individually.
 
     If unset, the output will be ignored.
     """
@@ -505,19 +520,22 @@ class Test:
 
         if self.output is not None:
             if isinstance(self.output, CommandOutput):
-                if result.stdout != self.output.stdout:
+                if not _is_valid_output(self.output.stdout, result.stdout):
                     report.failures.append(
-                        f"expected {repr(self.output.stdout)} on stdout, but got {repr(result.stdout)}"
+                        f"expected {_format_expected_output(self.output.stdout)}"
+                        f" on stdout, but got {repr(result.stdout)}"
                     )
 
-                if result.stderr != self.output.stderr:
+                if not _is_valid_output(self.output.stderr, result.stderr):
                     report.failures.append(
-                        f"expected {repr(self.output.stderr)} on stderr, but got {repr(result.stderr)}"
+                        f"expected {_format_expected_output(self.output.stderr)}"
+                        f" on stderr, but got {repr(result.stderr)}"
                     )
             else:
-                if result.stdout != self.output:
+                if not _is_valid_output(self.output, result.stdout):
                     report.failures.append(
-                        f"expected {repr(self.output)} as output, but got {repr(result.stdout)}"
+                        f"expected {_format_expected_output(self.output)}"
+                        f" as output, but got {repr(result.stdout)}"
                     )
 
         if self.aliases is not None:
