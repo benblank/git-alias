@@ -441,14 +441,14 @@ class Suite:
 class Test:
     name: str
 
-    context: GitExecutionContext
-
     command_line: Sequence[str]
     """The command and arguments to execute.
 
     Because the first element specifies the command to run, it is an error to
     provide an empty sequence.
     """
+
+    context: GitExecutionContext = field(default_factory=GitExecutionContext)
 
     define_aliases: Mapping[tuple[str, ...], Mapping[str, str]] = field(
         default_factory=dict, kw_only=True
@@ -531,6 +531,3 @@ class Test:
                     report.failures.append(
                         f"expected aliases {repr(self.aliases)}, but found {repr(actual)}"
                     )
-
-        for location_flags in set([*LOCATION_FLAGS, *self.define_aliases.keys()]):
-            self.context.clear_aliases(location_flags)

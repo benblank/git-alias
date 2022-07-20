@@ -4,7 +4,6 @@ from testlib import (
     COMMANDS_UNALIAS,
     LOCATION_FLAGS,
     CommandOutput,
-    GitExecutionContext,
     Suite,
     Test,
     pick,
@@ -19,15 +18,12 @@ def get_suite() -> Suite:
 
     for command in COMMANDS_UNALIAS:
         for location_flags in LOCATION_FLAGS:
-            context = GitExecutionContext()
-
             tests.append(
                 Suite(
                     f"with parameters command={command}, location_flags={location_flags}",
                     [
                         Test(
                             "removes only the named alias",
-                            context,
                             [*command, *location_flags, "foo"],
                             define_aliases={location_flags: ALIASES},
                             exit_code=0,
@@ -36,7 +32,6 @@ def get_suite() -> Suite:
                         ),
                         Test(
                             "supports wildcards",
-                            context,
                             [*command, *location_flags, "f*"],
                             define_aliases={location_flags: ALIASES},
                             exit_code=0,
@@ -47,7 +42,6 @@ def get_suite() -> Suite:
                         ),
                         Test(
                             "supports multiple parameters",
-                            context,
                             [*command, *location_flags, "ml", "func"],
                             define_aliases={location_flags: ALIASES},
                             exit_code=0,
@@ -58,7 +52,6 @@ def get_suite() -> Suite:
                         ),
                         Test(
                             "complains when no patterns are provided",
-                            context,
                             [*command, *location_flags],
                             define_aliases={location_flags: ALIASES},
                             exit_code=1,
@@ -67,7 +60,6 @@ def get_suite() -> Suite:
                         ),
                         Test(
                             "complains when a pattern doesn't match any aliases",
-                            context,
                             [*command, *location_flags, "no-such-alias", "f*"],
                             define_aliases={location_flags: ALIASES},
                             exit_code=1,
@@ -79,7 +71,6 @@ def get_suite() -> Suite:
                         ),
                         Test(
                             "doesn't remove aliases with --dry-run",
-                            context,
                             [*command, *location_flags, "--dry-run", "*"],
                             define_aliases={location_flags: ALIASES},
                             exit_code=0,
