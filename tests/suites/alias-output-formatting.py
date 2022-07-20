@@ -15,21 +15,21 @@ ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 
 
 def get_suite() -> Suite:
-    tests = []
+    tests: list[Test | Suite] = []
 
     for parameters in get_parameter_matrix(
         pick(COMMON_PARAMETERS, ["command-alias", "location-flags"])
     ):
-        context = GitExecutionContext(
-            parameters["command-alias"], parameters["location-flags"]
-        )
+        command = parameters["command-alias"]
+        location_flags = parameters["location-flags"]
+        context = GitExecutionContext()
 
         # Also used to construct the "default" test case.
         shell_flag = Test(
             "--shell flag",
             context,
-            ["--shell"],
-            define_aliases=ALIASES,
+            [*command, *location_flags, "--shell"],
+            define_aliases={location_flags: ALIASES},
             exit_code=0,
             output=CommandOutput(
                 stdout="git alias foo 'diff'\n"
@@ -43,8 +43,8 @@ def get_suite() -> Suite:
         config_header_flags = Test(
             "--config --header flags",
             context,
-            ["--config", "--header"],
-            define_aliases=ALIASES,
+            [*command, *location_flags, "--config", "--header"],
+            define_aliases={location_flags: ALIASES},
             exit_code=0,
             output=CommandOutput(
                 stdout="[alias]\n"
@@ -59,8 +59,8 @@ def get_suite() -> Suite:
         json_pretty_flags = Test(
             "--json --pretty flags",
             context,
-            ["--json", "--pretty"],
-            define_aliases=ALIASES,
+            [*command, *location_flags, "--json", "--pretty"],
+            define_aliases={location_flags: ALIASES},
             exit_code=0,
             output=CommandOutput(
                 stdout="{\n"
@@ -79,20 +79,20 @@ def get_suite() -> Suite:
                     replace(
                         shell_flag,
                         name="default",
-                        extra_arguments=[],
+                        command_line=[*command, *location_flags],
                     ),
                     shell_flag,
                     replace(
                         config_header_flags,
                         name="--config flag",
-                        extra_arguments=["--config"],
+                        command_line=[*command, *location_flags, "--config"],
                     ),
                     config_header_flags,
                     Test(
                         "--config --no-header flags",
                         context,
-                        ["--config", "--no-header"],
-                        define_aliases=ALIASES,
+                        [*command, *location_flags, "--config", "--no-header"],
+                        define_aliases={location_flags: ALIASES},
                         exit_code=0,
                         output=CommandOutput(
                             stdout='foo = "diff"\n'
@@ -104,14 +104,14 @@ def get_suite() -> Suite:
                     replace(
                         json_pretty_flags,
                         name="--json flag",
-                        extra_arguments=["--json"],
+                        command_line=[*command, *location_flags, "--json"],
                     ),
                     json_pretty_flags,
                     Test(
                         "--json --compact flags",
                         context,
-                        ["--json", "--compact"],
-                        define_aliases=ALIASES,
+                        [*command, *location_flags, "--json", "--compact"],
+                        define_aliases={location_flags: ALIASES},
                         exit_code=0,
                         output=CommandOutput(
                             stdout='{"foo":"diff","ml":"!echo foo\\necho bar","func":"!f() {}; f"}',

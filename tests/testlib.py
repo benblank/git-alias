@@ -33,7 +33,7 @@ _TESTS_DIR = (Path.cwd() / Path(__file__)).resolve().parent
 _SCRIPTS_DIR = _TESTS_DIR.parent
 _TEMP_ROOT = _TESTS_DIR / "tmp"
 
-COMMON_PARAMETERS: Mapping[str, Iterable[Any]] = {
+COMMON_PARAMETERS: dict[str, list[Any]] = {
     "command-alias": [
         ["git", "alias-abs"],
         ["git", "alias-rel"],
@@ -45,10 +45,10 @@ COMMON_PARAMETERS: Mapping[str, Iterable[Any]] = {
         ["git-unalias.sh"],
     ],
     "location-flags": [
-        ["--file", "gitconfig-specific-file"],
-        ["--global"],
-        ["--local"],
-        ["--system"],
+        ("--file", "gitconfig-specific-file"),
+        ("--global",),
+        ("--local",),
+        ("--system",),
     ],
 }
 
@@ -112,12 +112,7 @@ class CommandOutput:
 
 
 class GitExecutionContext:
-    def __init__(
-        self, base_command: Sequence[str], location_flags: Sequence[str]
-    ) -> None:
-        self.base_command = base_command
-        self.location_flags = location_flags
-
+    def __init__(self) -> None:
         # Ensure _TEMP_ROOT exists, so that temporary directories can be created
         # in it.
         os.makedirs(_TEMP_ROOT, exist_ok=True)
@@ -153,7 +148,7 @@ class GitExecutionContext:
             ),
         }
 
-        self._execute_command(["git", "init", str(self.repo_dir)])
+        self.execute_command(["git", "init", str(self.repo_dir)])
 
     @classmethod
     def cleanup(cls, temp_dir: Path) -> None:
@@ -167,42 +162,31 @@ class GitExecutionContext:
             f"Failed to fully clean up temporary directory '{path}'.", file=sys.stderr
         )
 
-    def add_aliases(self, aliases: Mapping[str, str]) -> None:
+    def add_aliases(
+        self, location_flags: Iterable[str], aliases: Mapping[str, str]
+    ) -> None:
         for name, contents in aliases.items():
-            self._execute_command(
-                ["git", "config", *self.location_flags, "alias." + name, contents],
+            self.execute_command(
+                ["git", "config", *location_flags, "alias." + name, contents],
                 check=True,
             )
 
-    def clear_aliases(self) -> None:
+    def clear_aliases(self, location_flags: Iterable[str]) -> None:
         # We could run `git config --name-only` rather than picking the keys off
         # `get_aliases()`, but this is simpler.
-        for name in self.get_aliases().keys():
-            self._execute_command(
+        for name in self.get_aliases(location_flags).keys():
+            self.execute_command(
                 [
                     "git",
                     "config",
-                    *self.location_flags,
+                    *location_flags,
                     "--unset-all",
                     "alias." + name,
                 ],
                 check=True,
             )
 
-    def execute_git(
-        self,
-        extra_arguments: Sequence[str],
-        *,
-        combine_output: bool = False,
-        check: bool = False,
-    ) -> subprocess.CompletedProcess[str]:
-        return self._execute_command(
-            [*self.base_command, *self.location_flags, *extra_arguments],
-            combine_output=combine_output,
-            check=check,
-        )
-
-    def _execute_command(
+    def execute_command(
         self,
         command: Sequence[str],
         *,
@@ -220,15 +204,15 @@ class GitExecutionContext:
             check=check,
         )
 
-    def get_aliases(self) -> Mapping[str, str]:
+    def get_aliases(self, location_flags: Iterable[str]) -> Mapping[str, str]:
         aliases = {}
 
         try:
-            result = self._execute_command(
+            result = self.execute_command(
                 [
                     "git",
                     "config",
-                    *self.location_flags,
+                    *location_flags,
                     "--null",
                     "--get-regex",
                     "^alias\\.",
@@ -486,11 +470,21 @@ class Test:
 
     context: GitExecutionContext
 
-    extra_arguments: Sequence[str]
-    """Extra arguments to add to the command line when executing it."""
+    command_line: Sequence[str]
+    """The command and arguments to execute.
 
-    define_aliases: Mapping[str, str] = field(default_factory=dict, kw_only=True)
-    """Aliases to create prior to running the test case."""
+    Because the first element specifies the command to run, it is an error to
+    provide an empty sequence.
+    """
+
+    define_aliases: Mapping[tuple[str], Mapping[str, str]] = field(
+        default_factory=dict, kw_only=True
+    )
+    """Aliases to create prior to running the test case.
+
+    The keys are the "location" flag(s) to pass to `git config` and the values
+    are {name: definition} mappings of aliases to define.
+    """
 
     exit_code: int | None = field(default=None, kw_only=True)
     """If set, the exit code expected from executing Git.
@@ -507,8 +501,13 @@ class Test:
     If unset, the output will be ignored.
     """
 
-    aliases: Mapping[str, str] | None = field(default=None, kw_only=True)
+    aliases: Mapping[tuple[str], Mapping[str, str]] | None = field(
+        default=None, kw_only=True
+    )
     """The aliases which must be present after the test case has executed.
+
+    The keys are the "location" flag(s) to pass to `git config` and the values
+    are {name: definition} mappings of aliases to check.
 
     Note that *all* aliases defined in the execution context must be present in
     `aliases_after` **and** that *all* aliases in `aliases_after` must be
@@ -518,11 +517,11 @@ class Test:
     def run(self, report: Report):
         """Executes the test case."""
 
-        if self.define_aliases:
-            self.context.add_aliases(self.define_aliases)
+        for location_flags, aliases in self.define_aliases.items():
+            self.context.add_aliases(location_flags, aliases)
 
-        result = self.context.execute_git(
-            self.extra_arguments,
+        result = self.context.execute_command(
+            self.command_line,
             combine_output=not isinstance(self.output, CommandOutput),
         )
 
@@ -552,11 +551,15 @@ class Test:
                     )
 
         if self.aliases is not None:
-            aliases = self.context.get_aliases()
+            for location_flags, expected in self.aliases.items():
+                actual = self.context.get_aliases(location_flags)
 
-            if aliases != self.aliases:
-                report.failures.append(
-                    f"expected aliases {repr(self.aliases)}, but found {repr(aliases)}"
-                )
+                if actual != expected:
+                    report.failures.append(
+                        f"expected aliases {repr(self.aliases)}, but found {repr(actual)}"
+                    )
 
-        self.context.clear_aliases()
+        for location_flags in set(
+            [*COMMON_PARAMETERS["location-flags"], *self.define_aliases.keys()]
+        ):
+            self.context.clear_aliases(location_flags)
