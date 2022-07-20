@@ -43,7 +43,7 @@ COMMANDS_UNALIAS: list[list[str]] = [
 ]
 
 LOCATION_FLAGS: list[tuple[str, ...]] = [
-    ("--file", "gitconfig-specific-file"),
+    ("--file", "../gitconfig-specific-file"),
     ("--global",),
     ("--local",),
     ("--system",),
@@ -118,7 +118,7 @@ class GitExecutionContext:
             ),
         }
 
-        self.execute_command(["git", "init", str(self.repo_dir)])
+        self.execute_command(["git", "init", str(self.repo_dir)], cwd=self.base_dir)
 
     @classmethod
     def cleanup(cls, temp_dir: Path) -> None:
@@ -160,12 +160,15 @@ class GitExecutionContext:
         self,
         command: Sequence[str],
         *,
+        cwd: Path | None = None,
         combine_output: bool = False,
         check: bool = False,
     ) -> subprocess.CompletedProcess[str]:
+        cwd = cwd if cwd is not None else self.repo_dir
+
         return subprocess.run(
             command,
-            cwd=self.base_dir,
+            cwd=cwd,
             env=self.env,
             text=True,
             stdin=subprocess.DEVNULL,
