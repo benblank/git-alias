@@ -1,7 +1,6 @@
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 import enum
-import itertools
 import os
 import os.path
 from pathlib import Path
@@ -13,11 +12,9 @@ import tempfile
 import traceback
 from types import TracebackType
 from typing import (
-    Any,
     Callable,
     ClassVar,
     Iterable,
-    Iterator,
     Mapping,
     Sequence,
     Type,
@@ -33,28 +30,24 @@ _TESTS_DIR = (Path.cwd() / Path(__file__)).resolve().parent
 _SCRIPTS_DIR = _TESTS_DIR.parent
 _TEMP_ROOT = _TESTS_DIR / "tmp"
 
-COMMON_PARAMETERS: dict[str, list[Any]] = {
-    "command-alias": [
-        ["git", "alias-abs"],
-        ["git", "alias-rel"],
-        ["git-alias.sh"],
-    ],
-    "command-unalias": [
-        ["git", "unalias-abs"],
-        ["git", "unalias-rel"],
-        ["git-unalias.sh"],
-    ],
-    "location-flags": [
-        ("--file", "gitconfig-specific-file"),
-        ("--global",),
-        ("--local",),
-        ("--system",),
-    ],
-}
+COMMANDS_ALIAS: list[list[str]] = [
+    ["git", "alias-abs"],
+    ["git", "alias-rel"],
+    ["git-alias.sh"],
+]
 
+COMMANDS_UNALIAS: list[list[str]] = [
+    ["git", "unalias-abs"],
+    ["git", "unalias-rel"],
+    ["git-unalias.sh"],
+]
 
-def format_parameters(parameters: Mapping[str, Any]):
-    return ", ".join(f"{name}={value}" for name, value in parameters.items())
+LOCATION_FLAGS: list[tuple[str, ...]] = [
+    ("--file", "gitconfig-specific-file"),
+    ("--global",),
+    ("--local",),
+    ("--system",),
+]
 
 
 def _format_expected_output(expected: str | re.Pattern) -> str:
@@ -62,29 +55,6 @@ def _format_expected_output(expected: str | re.Pattern) -> str:
         return f"a string matching /{expected.pattern}/"
 
     return repr(expected)
-
-
-def get_parameter_matrix(
-    parameters: Mapping[K, Iterable[V]]
-) -> Iterator[Mapping[K, V]]:
-    """Produce all possible combinations of parameter values.
-
-    Accepts a mapping of parameter names to their possible values and returns an
-    iterator over mappings of each possible combination of values. For example:
-
-    >>> list(get_parameter_matrix({'a': [1, 2, 3], 'b': [4, 5, 6]}))
-    [{'a': 1, 'b': 4}, {'a': 1, 'b': 5}, {'a': 1, 'b': 6}, {'a': 2, 'b': 4}, {'a': 2, 'b': 5}, {'a': 2, 'b': 6}, {'a': 3, 'b': 4}, {'a': 3, 'b': 5}, {'a': 3, 'b': 6}]
-    """
-
-    return (
-        dict(pairs)
-        for pairs in itertools.product(
-            *(
-                [(name, value) for value in values]
-                for name, values in parameters.items()
-            )
-        )
-    )
 
 
 def _is_valid_output(expected: str | re.Pattern, actual: str) -> bool:
@@ -163,7 +133,7 @@ class GitExecutionContext:
         )
 
     def add_aliases(
-        self, location_flags: Iterable[str], aliases: Mapping[str, str]
+        self, location_flags: Sequence[str], aliases: Mapping[str, str]
     ) -> None:
         for name, contents in aliases.items():
             self.execute_command(
@@ -171,7 +141,7 @@ class GitExecutionContext:
                 check=True,
             )
 
-    def clear_aliases(self, location_flags: Iterable[str]) -> None:
+    def clear_aliases(self, location_flags: Sequence[str]) -> None:
         # We could run `git config --name-only` rather than picking the keys off
         # `get_aliases()`, but this is simpler.
         for name in self.get_aliases(location_flags).keys():
@@ -204,7 +174,7 @@ class GitExecutionContext:
             check=check,
         )
 
-    def get_aliases(self, location_flags: Iterable[str]) -> Mapping[str, str]:
+    def get_aliases(self, location_flags: Sequence[str]) -> Mapping[str, str]:
         aliases = {}
 
         try:
@@ -477,7 +447,7 @@ class Test:
     provide an empty sequence.
     """
 
-    define_aliases: Mapping[tuple[str], Mapping[str, str]] = field(
+    define_aliases: Mapping[tuple[str, ...], Mapping[str, str]] = field(
         default_factory=dict, kw_only=True
     )
     """Aliases to create prior to running the test case.
@@ -501,7 +471,7 @@ class Test:
     If unset, the output will be ignored.
     """
 
-    aliases: Mapping[tuple[str], Mapping[str, str]] | None = field(
+    aliases: Mapping[tuple[str, ...], Mapping[str, str]] | None = field(
         default=None, kw_only=True
     )
     """The aliases which must be present after the test case has executed.
@@ -559,7 +529,5 @@ class Test:
                         f"expected aliases {repr(self.aliases)}, but found {repr(actual)}"
                     )
 
-        for location_flags in set(
-            [*COMMON_PARAMETERS["location-flags"], *self.define_aliases.keys()]
-        ):
+        for location_flags in set([*LOCATION_FLAGS, *self.define_aliases.keys()]):
             self.context.clear_aliases(location_flags)
