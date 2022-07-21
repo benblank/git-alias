@@ -1,0 +1,117 @@
+from dataclasses import dataclass
+from typing import Sequence
+
+from testlib import (
+    COMMANDS_ALIAS,
+    LOCATION_FLAGS,
+    CommandOutput,
+    Suite,
+    Test,
+)
+
+
+@dataclass
+class TestParameters:
+    extra_arguments: Sequence[str]
+    stdout_with_aliases: str
+    stdout_without_aliases: str = ""
+
+
+ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
+TEST_PARAMETERS = [
+    TestParameters(
+        [],
+        "git alias foo 'diff'\ngit alias ml '!echo foo\necho bar'\ngit alias func '!f() {}; f'\n",
+    ),
+    TestParameters(
+        ["--shell"],
+        "git alias foo 'diff'\ngit alias ml '!echo foo\necho bar'\ngit alias func '!f() {}; f'\n",
+    ),
+    TestParameters(
+        ["--config"],
+        '[alias]\n\tfoo = "diff"\n\tml = "!echo foo\\necho bar"\n\tfunc = "!f() {}; f"\n',
+        "[alias]\n",
+    ),
+    TestParameters(
+        ["--config", "--header"],
+        '[alias]\n\tfoo = "diff"\n\tml = "!echo foo\\necho bar"\n\tfunc = "!f() {}; f"\n',
+        "[alias]\n",
+    ),
+    TestParameters(
+        ["--config", "--no-header"],
+        'foo = "diff"\nml = "!echo foo\\necho bar"\nfunc = "!f() {}; f"\n',
+    ),
+    TestParameters(
+        ["--json"],
+        '{\n  "foo": "diff",\n  "ml": "!echo foo\\necho bar",\n  "func": "!f() {}; f"\n}\n',
+        "{}\n",
+    ),
+    TestParameters(
+        ["--json", "--pretty"],
+        '{\n  "foo": "diff",\n  "ml": "!echo foo\\necho bar",\n  "func": "!f() {}; f"\n}\n',
+        "{}\n",
+    ),
+    TestParameters(
+        ["--json", "--compact"],
+        '{"foo":"diff","ml":"!echo foo\\necho bar","func":"!f() {}; f"}',
+        "{}",
+    ),
+]
+
+
+def get_suite() -> Suite:
+    tests: list[Test | Suite] = []
+
+    for command in COMMANDS_ALIAS:
+        for location_flags in LOCATION_FLAGS:
+            no_aliases_tests: list[Test] = []
+            aliases_tests: list[Test] = []
+
+            for test_parameters in TEST_PARAMETERS:
+                if not test_parameters.extra_arguments:
+                    name = "(no additional arguments)"
+                elif len(test_parameters.extra_arguments) == 1:
+                    name = test_parameters.extra_arguments[0] + " flag"
+                else:
+                    name = " ".join(test_parameters.extra_arguments) + " flags"
+
+                no_aliases_tests.append(
+                    Test(
+                        name,
+                        [*command, *location_flags, *test_parameters.extra_arguments],
+                        exit_code=0,
+                        output=CommandOutput(
+                            stdout=test_parameters.stdout_without_aliases, stderr=""
+                        ),
+                    ),
+                )
+
+                aliases_tests.append(
+                    Test(
+                        name,
+                        [*command, *location_flags, *test_parameters.extra_arguments],
+                        define_aliases={location_flags: ALIASES},
+                        exit_code=0,
+                        output=CommandOutput(
+                            stdout=test_parameters.stdout_with_aliases, stderr=""
+                        ),
+                    ),
+                )
+
+            tests.append(
+                Suite(
+                    repr(" ".join([*command, *location_flags]))
+                    + " without aliases defined",
+                    no_aliases_tests,
+                )
+            )
+
+            tests.append(
+                Suite(
+                    repr(" ".join([*command, *location_flags]))
+                    + " with aliases defined",
+                    aliases_tests,
+                )
+            )
+
+    return Suite("alias: no positional parameters", tests)
