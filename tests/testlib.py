@@ -30,24 +30,26 @@ _TESTS_DIR = (Path.cwd() / Path(__file__)).resolve().parent
 _SCRIPTS_DIR = _TESTS_DIR.parent
 _TEMP_ROOT = _TESTS_DIR / "tmp"
 
-COMMANDS_ALIAS: list[list[str]] = [
-    ["git", "alias-abs"],
-    ["git", "alias-rel"],
-    ["git-alias.sh"],
-]
+ALIAS_COMMANDS = {
+    "symlink with absolute path": ["git", "alias-abs"],
+    "symlink with relative path": ["git", "alias-rel"],
+    "no symlink": ["git-alias.sh"],
+}
 
-COMMANDS_UNALIAS: list[list[str]] = [
-    ["git", "unalias-abs"],
-    ["git", "unalias-rel"],
-    ["git-unalias.sh"],
-]
+UNALIAS_COMMANDS = {
+    "symlink with absolute path": ["git", "unalias-abs"],
+    "symlink with relative path": ["git", "unalias-rel"],
+    "no symlink": ["git-unalias.sh"],
+}
 
-LOCATION_FLAGS: list[tuple[str, ...]] = [
-    ("--file", "../gitconfig-specific-file"),
-    ("--global",),
-    ("--local",),
-    ("--system",),
-]
+LOCATION_FLAGS: dict[str, tuple[str, ...]] = {
+    "specific file": ("--file", "../gitconfig-specific-file"),
+    "global config": ("--global",),
+    "local repo config": ("--local",),
+    "system config": ("--system",),
+}
+
+COMMON_ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 
 
 def _format_expected_output(expected: str | re.Pattern) -> str:

@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence
 
 from testlib import (
-    COMMANDS_ALIAS,
-    LOCATION_FLAGS,
+    COMMON_ALIASES,
     CommandOutput,
     Suite,
     Test,
@@ -17,7 +16,6 @@ class TestParameters:
     stdout_without_aliases: str = ""
 
 
-ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 TEST_PARAMETERS = [
     TestParameters(
         [],
@@ -60,58 +58,44 @@ TEST_PARAMETERS = [
 
 
 def get_suite() -> Suite:
-    tests: list[Test | Suite] = []
+    no_aliases_tests: list[Test] = []
+    aliases_tests: list[Test] = []
 
-    for command in COMMANDS_ALIAS:
-        for location_flags in LOCATION_FLAGS:
-            no_aliases_tests: list[Test] = []
-            aliases_tests: list[Test] = []
+    for test_parameters in TEST_PARAMETERS:
+        if not test_parameters.extra_arguments:
+            name = "(no additional arguments)"
+        elif len(test_parameters.extra_arguments) == 1:
+            name = test_parameters.extra_arguments[0] + " flag"
+        else:
+            name = " ".join(test_parameters.extra_arguments) + " flags"
 
-            for test_parameters in TEST_PARAMETERS:
-                if not test_parameters.extra_arguments:
-                    name = "(no additional arguments)"
-                elif len(test_parameters.extra_arguments) == 1:
-                    name = test_parameters.extra_arguments[0] + " flag"
-                else:
-                    name = " ".join(test_parameters.extra_arguments) + " flags"
+        no_aliases_tests.append(
+            Test(
+                name,
+                ["git-alias.sh", "--global", *test_parameters.extra_arguments],
+                exit_code=0,
+                output=CommandOutput(
+                    stdout=test_parameters.stdout_without_aliases, stderr=""
+                ),
+            ),
+        )
 
-                no_aliases_tests.append(
-                    Test(
-                        name,
-                        [*command, *location_flags, *test_parameters.extra_arguments],
-                        exit_code=0,
-                        output=CommandOutput(
-                            stdout=test_parameters.stdout_without_aliases, stderr=""
-                        ),
-                    ),
-                )
+        aliases_tests.append(
+            Test(
+                name,
+                ["git", "alias-abs", "--global", *test_parameters.extra_arguments],
+                define_aliases={("--global",): COMMON_ALIASES},
+                exit_code=0,
+                output=CommandOutput(
+                    stdout=test_parameters.stdout_with_aliases, stderr=""
+                ),
+            ),
+        )
 
-                aliases_tests.append(
-                    Test(
-                        name,
-                        [*command, *location_flags, *test_parameters.extra_arguments],
-                        define_aliases={location_flags: ALIASES},
-                        exit_code=0,
-                        output=CommandOutput(
-                            stdout=test_parameters.stdout_with_aliases, stderr=""
-                        ),
-                    ),
-                )
-
-            tests.append(
-                Suite(
-                    repr(" ".join([*command, *location_flags]))
-                    + " without aliases defined",
-                    no_aliases_tests,
-                )
-            )
-
-            tests.append(
-                Suite(
-                    repr(" ".join([*command, *location_flags]))
-                    + " with aliases defined",
-                    aliases_tests,
-                )
-            )
-
-    return Suite("alias: no positional parameters", tests)
+    return Suite(
+        "alias formatting (no positional parameters)",
+        [
+            Suite("without aliases defined", no_aliases_tests),
+            Suite("with aliases defined", aliases_tests),
+        ],
+    )
