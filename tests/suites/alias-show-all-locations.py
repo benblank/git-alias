@@ -86,9 +86,19 @@ def get_suite() -> Suite:
         )
 
     return Suite(
-        "alias locations (no positional parameters)",
+        "alias",
         [
-            Suite("from Git settings", config_tests),
-            Suite("on the command line", cli_tests),
+            Suite(
+                "no positional parameters",
+                [
+                    Suite(
+                        "location flags",
+                        [
+                            Suite("from Git settings", config_tests),
+                            Suite("on the command line", cli_tests),
+                        ],
+                    )
+                ],
+            )
         ],
     )

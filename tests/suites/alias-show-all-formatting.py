@@ -63,7 +63,7 @@ def get_suite() -> Suite:
 
     for test_parameters in TEST_PARAMETERS:
         if not test_parameters.extra_arguments:
-            name = "(no additional arguments)"
+            name = "(no formatting flags)"
         elif len(test_parameters.extra_arguments) == 1:
             name = test_parameters.extra_arguments[0] + " flag"
         else:
@@ -93,9 +93,19 @@ def get_suite() -> Suite:
         )
 
     return Suite(
-        "alias formatting (no positional parameters)",
+        "alias",
         [
-            Suite("without aliases defined", no_aliases_tests),
-            Suite("with aliases defined", aliases_tests),
+            Suite(
+                "no positional parameters",
+                [
+                    Suite(
+                        "formatting flags",
+                        [
+                            Suite("without aliases defined", no_aliases_tests),
+                            Suite("with aliases defined", aliases_tests),
+                        ],
+                    )
+                ],
+            )
         ],
     )

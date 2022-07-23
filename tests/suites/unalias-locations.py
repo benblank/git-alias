@@ -80,9 +80,14 @@ def get_suite() -> Suite:
         )
 
     return Suite(
-        "unalias locations",
+        "unalias",
         [
-            Suite("from Git settings", config_tests),
-            Suite("on the command line", cli_tests),
+            Suite(
+                "location flags",
+                [
+                    Suite("from Git settings", config_tests),
+                    Suite("on the command line", cli_tests),
+                ],
+            )
         ],
     )

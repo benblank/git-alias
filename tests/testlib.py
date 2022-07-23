@@ -413,6 +413,26 @@ class Suite:
     name: str
     tests: Iterable["Test | Suite"]
 
+    @classmethod
+    def merge(cls, tests: Iterable["Test | Suite"]) -> Iterable["Test | Suite"]:
+        result: list["Test | Suite"] = []
+        names: dict[str, Suite] = {}
+
+        for test in tests:
+            if isinstance(test, Test):
+                result.append(test)
+
+                continue
+
+            if test.name not in names:
+                result.append(test)
+                names[test.name] = test
+            else:
+                existing = names[test.name]
+                existing.tests = Suite.merge([*existing.tests, *test.tests])
+
+        return result
+
     def run(self, report: Report) -> None:
         for test in self.tests:
             with report.create_child_report(test) as child_report:

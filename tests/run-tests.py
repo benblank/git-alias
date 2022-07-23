@@ -76,7 +76,7 @@ def run_suites(module_paths: Iterable[str], *, show_successful: bool) -> bool:
 
     reports = []
 
-    for suite in suites:
+    for suite in Suite.merge(suites):
         with Report(suite.name, show_successful=show_successful) as report:
             reports.append(report)
             suite.run(report)
