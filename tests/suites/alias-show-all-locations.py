@@ -2,8 +2,10 @@ import random
 import string
 
 from testlib import (
+    CONFIG_LOCATIONS,
     LOCATION_FLAGS,
     CommandOutput,
+    GitExecutionContext,
     Suite,
     Test,
 )
@@ -16,26 +18,77 @@ LOCATION_ALIAS_NAMES = {
     for location_flags in LOCATION_FLAGS.values()
 }
 
+UNIQUE_ALIASES = {
+    l_flags: {LOCATION_ALIAS_NAMES[l_flags]: "diff"}
+    for l_flags in LOCATION_FLAGS.values()
+}
+
 
 def get_suite() -> Suite:
-    # TODO: test default location + config setting
+    config_tests: list[Test] = []
+    cli_tests: list[Test] = []
 
-    return Suite(
-        "alias locations (no positional parameters)",
-        [
+    for setting, location_name in CONFIG_LOCATIONS.items():
+        context = GitExecutionContext()
+
+        # Interpret the empty string as not being set.
+        if setting:
+            context.execute_command(
+                ["git", "config", "--local", "git-alias.config-file", setting]
+            )
+
+        location_flags = LOCATION_FLAGS[location_name]
+
+        config_tests.append(
             Test(
-                name,
-                ["git-alias.sh", *location_flags, "--shell"],
-                define_aliases={
-                    l_flags: {LOCATION_ALIAS_NAMES[l_flags]: "diff"}
-                    for l_flags in LOCATION_FLAGS.values()
-                },
+                setting if setting else "(not set)",
+                ["git-alias.sh", "--shell"],
+                context,
+                define_aliases=UNIQUE_ALIASES,
                 exit_code=0,
                 output=CommandOutput(
                     stdout=f"git alias {LOCATION_ALIAS_NAMES[location_flags]} 'diff'\n",
                     stderr="",
                 ),
             )
-            for name, location_flags in LOCATION_FLAGS.items()
+        )
+
+    for name, location_flags in LOCATION_FLAGS.items():
+        context = GitExecutionContext()
+
+        # Define a config setting, which should always be overridden by the cli
+        # flags.
+        context.execute_command(
+            [
+                "git",
+                "config",
+                "--local",
+                "git-alias.config-file",
+                "../gitconfig-unused",
+            ]
+        )
+
+        # And an alias which should never appear in the output.
+        context.add_aliases(("--file", "../gitconfig-unused"), {"foo": "log"})
+
+        cli_tests.append(
+            Test(
+                name,
+                ["git-alias.sh", *location_flags, "--shell"],
+                context,
+                define_aliases=UNIQUE_ALIASES,
+                exit_code=0,
+                output=CommandOutput(
+                    stdout=f"git alias {LOCATION_ALIAS_NAMES[location_flags]} 'diff'\n",
+                    stderr="",
+                ),
+            )
+        )
+
+    return Suite(
+        "alias locations (no positional parameters)",
+        [
+            Suite("from Git settings", config_tests),
+            Suite("on the command line", cli_tests),
         ],
     )

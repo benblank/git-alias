@@ -51,6 +51,15 @@ LOCATION_FLAGS: dict[str, tuple[str, ...]] = {
 
 COMMON_ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 
+CONFIG_LOCATIONS = {
+    "": "global config",
+    "../gitconfig-specific-file": "specific file",
+    "--file ../gitconfig-specific-file": "specific file",
+    "--global": "global config",
+    "--local": "local repo config",
+    "--system": "system config",
+}
+
 
 def _format_expected_output(expected: str | re.Pattern) -> str:
     if isinstance(expected, re.Pattern):
