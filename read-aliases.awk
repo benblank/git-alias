@@ -1,6 +1,7 @@
-# Finds all alias definitions in the output of `git config --get-regex alias\\.`
-# and calls a function named `handle` (which must be provided by a separate
-# script) with the name and body of each one. Multiline aliases are supported.
+# Finds all alias definitions in the output of `git config --get-regexp
+# ^alias\\.` and calls a function named `handle` (which must be provided by a
+# separate script) with the name and body of each one. Multiline aliases are
+# supported.
 
 /alias\./ {
   if (name != "") {

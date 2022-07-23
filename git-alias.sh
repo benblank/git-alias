@@ -173,7 +173,7 @@ else
         # parameters.
         #
         # shellcheck disable=2086
-        git config $where --get-regex ^alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
+        git config $where --get-regexp ^alias\\. | awk -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-shell.awk"
       fi
     ;;
 
@@ -211,7 +211,7 @@ else
         # parameters.
         #
         # shellcheck disable=2086
-        git config $where --get-regex ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
+        git config $where --get-regexp ^alias\\. | awk -v indent="$indent" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-gitconfig.awk"
       fi
     ;;
 
@@ -247,7 +247,7 @@ else
         # parameters.
         #
         # shellcheck disable=2086
-        git config $where --get-regex ^alias\\. | awk -v style="$style" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-json.awk"
+        git config $where --get-regexp ^alias\\. | awk -v style="$style" -f "$script_dir/read-aliases.awk" -f "$script_dir/handle-json.awk"
       fi
     ;;
 

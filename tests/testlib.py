@@ -197,7 +197,7 @@ class GitExecutionContext:
                     "config",
                     *location_flags,
                     "--null",
-                    "--get-regex",
+                    "--get-regexp",
                     "^alias\\.",
                 ],
                 check=True,
