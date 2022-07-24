@@ -49,6 +49,10 @@ LOCATION_FLAGS: dict[str, tuple[str, ...]] = {
     "system config": ("--system",),
 }
 
+NO_ALIASES: dict[tuple[str, ...], dict[str, str]] = {
+    location_flags: {} for location_flags in LOCATION_FLAGS.values()
+}
+
 COMMON_ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
 
 CONFIG_LOCATIONS = {
