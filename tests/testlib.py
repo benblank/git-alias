@@ -13,6 +13,7 @@ import traceback
 from types import TracebackType
 from typing import (
     ClassVar,
+    Hashable,
     Iterable,
     Mapping,
     Sequence,
@@ -22,7 +23,7 @@ from typing import (
 import weakref
 
 
-K = TypeVar("K")
+K = TypeVar("K", bound=Hashable)
 V = TypeVar("V")
 
 _TESTS_DIR = (Path.cwd() / Path(__file__)).resolve().parent
