@@ -108,10 +108,10 @@ else
   awk_extra_init=
 
   case "$format" in
-    default | --shell ) handler="handle-shell.awk";;
+    default | --shell ) formatter="format-shell.awk";;
 
     --config | --config-no-header )
-      handler="handle-gitconfig.awk"
+      formatter="format-gitconfig.awk"
 
       if [ "$format" = --config ]; then
         awk_extra_init="${awk_extra_init}print \"[alias]\";indent=\"\\t\";"
@@ -119,7 +119,7 @@ else
     ;;
 
     --json | --json-compact )
-      handler="handle-json.awk"
+      formatter="format-json.awk"
 
       if [ "$format" = --json-compact ]; then
         awk_extra_init="${awk_extra_init}style=\"compact\";"
@@ -155,5 +155,5 @@ else
     aliases="$(git config $where --get-regexp ^alias\\.)"
   fi
 
-  echo "$aliases" | awk "BEGIN { $awk_extra_init } $(cat "$script_dir/read-aliases.awk") $(cat "$script_dir/$handler")"
+  echo "$aliases" | awk "BEGIN { $awk_extra_init } $(cat "$script_dir/parse-aliases.awk") $(cat "$script_dir/$formatter")"
 fi
