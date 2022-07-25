@@ -17,33 +17,13 @@ class TestParameters:
 
 
 TEST_PARAMETERS = [
-    TestParameters(
-        [],
-        "git alias func '!f() {}; f'\n",
-    ),
-    TestParameters(
-        ["--shell"],
-        "git alias func '!f() {}; f'\n",
-    ),
-    TestParameters(
-        ["--config"],
-        '[alias]\n\tfunc = "!f() {}; f"\n',
-        "[alias]\n",
-    ),
-    TestParameters(
-        ["--config-no-header"],
-        'func = "!f() {}; f"\n',
-    ),
-    TestParameters(
-        ["--json"],
-        '{\n  "func": "!f() {}; f"\n}\n',
-        "{}\n",
-    ),
-    TestParameters(
-        ["--json-compact"],
-        '{"func":"!f() {}; f"}',
-        "{}",
-    ),
+    TestParameters([], "git alias func '!f() {}; f'\n"),
+    TestParameters(["--shell"], "git alias func '!f() {}; f'\n"),
+    TestParameters(["--config"], '[alias]\n\tfunc = "!f() {}; f"\n', "[alias]\n"),
+    TestParameters(["--config-no-header"], 'func = "!f() {}; f"\n'),
+    TestParameters(["--json"], '{\n  "func": "!f() {}; f"\n}\n', "{}\n"),
+    TestParameters(["--json-compact"], '{"func":"!f() {}; f"}', "{}"),
+    TestParameters(["--names-only"], "func\n", ""),
 ]
 
 

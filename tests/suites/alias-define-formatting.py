@@ -2,11 +2,12 @@ from testlib import NO_ALIASES, CommandOutput, Suite, Test
 
 
 FORMAT_FLAGS = [
-    ["--shell"],
     ["--config"],
     ["--config-no-header"],
     ["--json"],
     ["--json-compact"],
+    ["--names-only"],
+    ["--shell"],
 ]
 
 

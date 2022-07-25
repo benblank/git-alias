@@ -44,6 +44,7 @@ TEST_PARAMETERS = [
         '{"foo":"diff","ml":"!echo foo\\necho bar","func":"!f() {}; f"}',
         "{}",
     ),
+    TestParameters(["--names-only"], "foo\nml\nfunc\n", ""),
 ]
 
 

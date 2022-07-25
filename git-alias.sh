@@ -13,7 +13,7 @@ where=default
 
 while true; do
   case "$1" in
-    --config | --config-no-header | --json | --json-compact | --shell ) format=$1;;
+    --config | --config-no-header | --json | --json-compact | --names-only | --shell ) format=$1;;
     --file ) where="--file $2"; shift;;
     --global | --local | --system | --worktree ) where=$1;;
     -- ) shift; break;;
@@ -127,6 +127,8 @@ else
         awk_extra_init="${awk_extra_init}style=\"pretty\";"
       fi
     ;;
+
+    --names-only ) formatter="format-names.awk";;
 
     * ) >&2 echo "Invalid format \"$format\". How did you do that?"; exit 1;;
   esac
