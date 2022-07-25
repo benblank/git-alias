@@ -1,12 +1,7 @@
 from dataclasses import dataclass
 from typing import Sequence
 
-from testlib import (
-    COMMON_ALIASES,
-    CommandOutput,
-    Suite,
-    Test,
-)
+from testlib import COMMON_ALIASES, CommandOutput, Suite, Test
 
 
 @dataclass
@@ -68,7 +63,7 @@ def get_suite() -> Suite:
                 output=CommandOutput(
                     stdout=test_parameters.stdout_without_aliases, stderr=""
                 ),
-            ),
+            )
         )
 
         aliases_tests.append(
@@ -80,7 +75,7 @@ def get_suite() -> Suite:
                 output=CommandOutput(
                     stdout=test_parameters.stdout_with_aliases, stderr=""
                 ),
-            ),
+            )
         )
 
     return Suite(

@@ -1,12 +1,6 @@
 import re
 
-from testlib import (
-    COMMON_ALIASES,
-    CommandOutput,
-    Suite,
-    Test,
-    pick,
-)
+from testlib import COMMON_ALIASES, CommandOutput, Suite, Test, pick
 
 
 def get_suite() -> Suite:

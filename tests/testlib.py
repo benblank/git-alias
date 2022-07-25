@@ -11,15 +11,7 @@ import sys
 import tempfile
 import traceback
 from types import TracebackType
-from typing import (
-    ClassVar,
-    Hashable,
-    Iterable,
-    Mapping,
-    Sequence,
-    Type,
-    TypeVar,
-)
+from typing import ClassVar, Hashable, Iterable, Mapping, Sequence, Type, TypeVar
 import weakref
 
 
@@ -161,13 +153,7 @@ class GitExecutionContext:
         # `get_aliases()`, but this is simpler.
         for name in self.get_aliases(location_flags).keys():
             self.execute_command(
-                [
-                    "git",
-                    "config",
-                    *location_flags,
-                    "--unset-all",
-                    "alias." + name,
-                ],
+                ["git", "config", *location_flags, "--unset-all", "alias." + name],
                 check=True,
             )
 
@@ -325,8 +311,7 @@ class Report(AbstractContextManager):
 
         if self.__children:
             return own_counts + sum(
-                (child.counts for child in self.__children),
-                start=Report.Counts(),
+                (child.counts for child in self.__children), start=Report.Counts()
             )
 
         return own_counts
@@ -406,8 +391,7 @@ class Report(AbstractContextManager):
 
         if self.__children:
             return own_status + sum(
-                (child.status for child in self.__children),
-                start=Report.Status.SUCCESS,
+                (child.status for child in self.__children), start=Report.Status.SUCCESS
             )
 
         return own_status
@@ -501,8 +485,7 @@ class Test:
             self.context.add_aliases(location_flags, aliases)
 
         result = self.context.execute_command(
-            self.command_line,
-            combine_output=not isinstance(self.output, CommandOutput),
+            self.command_line, combine_output=not isinstance(self.output, CommandOutput)
         )
 
         if self.exit_code is not None and result.returncode != self.exit_code:

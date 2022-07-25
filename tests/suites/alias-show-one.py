@@ -1,8 +1,4 @@
-from testlib import (
-    CommandOutput,
-    Suite,
-    Test,
-)
+from testlib import CommandOutput, Suite, Test
 
 
 def get_suite() -> Suite:

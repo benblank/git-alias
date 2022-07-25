@@ -1,10 +1,4 @@
-from testlib import (
-    ALIAS_COMMANDS,
-    COMMON_ALIASES,
-    CommandOutput,
-    Suite,
-    Test,
-)
+from testlib import ALIAS_COMMANDS, COMMON_ALIASES, CommandOutput, Suite, Test
 
 
 def get_suite() -> Suite:

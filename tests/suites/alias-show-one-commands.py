@@ -1,10 +1,4 @@
-from testlib import (
-    ALIAS_COMMANDS,
-    COMMON_ALIASES,
-    CommandOutput,
-    Suite,
-    Test,
-)
+from testlib import ALIAS_COMMANDS, COMMON_ALIASES, CommandOutput, Suite, Test
 
 
 def get_suite() -> Suite:
@@ -23,8 +17,7 @@ def get_suite() -> Suite:
                                 define_aliases={("--global",): COMMON_ALIASES},
                                 exit_code=0,
                                 output=CommandOutput(
-                                    stdout="git alias func '!f() {}; f'\n",
-                                    stderr="",
+                                    stdout="git alias func '!f() {}; f'\n", stderr=""
                                 ),
                             )
                             for name, command in ALIAS_COMMANDS.items()

@@ -51,13 +51,7 @@ def get_suite() -> Suite:
         # Define a config setting, which should always be overridden by the cli
         # flags.
         context.execute_command(
-            [
-                "git",
-                "config",
-                "--local",
-                "git-alias.config-file",
-                "../gitconfig-unused",
-            ]
+            ["git", "config", "--local", "git-alias.config-file", "../gitconfig-unused"]
         )
 
         # And some aliases which should always remain after the command has run.

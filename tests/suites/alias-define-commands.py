@@ -1,9 +1,4 @@
-from testlib import (
-    ALIAS_COMMANDS,
-    NO_ALIASES,
-    Suite,
-    Test,
-)
+from testlib import ALIAS_COMMANDS, NO_ALIASES, Suite, Test
 
 
 def get_suite() -> Suite:
