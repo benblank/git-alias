@@ -138,11 +138,9 @@ else
     # parameters.
     #
     # shellcheck disable=2086
-    alias="$(git config $where --get alias."$1")"
+    aliases="$(git config $where --get-regexp "^alias\\.$1\$")"
 
-    if [ -n "$alias" ]; then
-      echo "$alias" | awk "BEGIN { name = \"$1\";$awk_extra_init } $(cat "$script_dir/read-all.awk") $(cat "$script_dir/$handler")"
-    else
+    if [ -z "$aliases" ]; then
       >&2 echo "No alias named \"$1\" exists."
 
       exit 1
@@ -154,6 +152,8 @@ else
     # parameters.
     #
     # shellcheck disable=2086
-    git config $where --get-regexp ^alias\\. | awk "BEGIN { $awk_extra_init } $(cat "$script_dir/read-aliases.awk") $(cat "$script_dir/$handler")"
+    aliases="$(git config $where --get-regexp ^alias\\.)"
   fi
+
+  echo "$aliases" | awk "BEGIN { $awk_extra_init } $(cat "$script_dir/read-aliases.awk") $(cat "$script_dir/$handler")"
 fi
