@@ -2,7 +2,7 @@ name: Run test suite
 
 on:
   push:
-    branches: [wip]
+    branches: [main, wip]
 
 permissions:
   contents: read

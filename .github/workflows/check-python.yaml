@@ -2,7 +2,7 @@ name: Check Python code
 
 on:
   push:
-    branches: [wip]
+    branches: [main, wip]
 
 permissions:
   contents: read
