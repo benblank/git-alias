@@ -83,6 +83,7 @@ def run_suites(module_paths: Iterable[str], *, show_successful: bool) -> bool:
             report.print()
 
     counts = sum((report.counts for report in reports), start=Report.Counts())
+    status = sum((report.status for report in reports), start=Report.Status.SUCCESS)
 
     print(
         f"Ran {counts.tests} total test(s) from {len(suites)} file(s)."
@@ -90,7 +91,7 @@ def run_suites(module_paths: Iterable[str], *, show_successful: bool) -> bool:
         f" and {counts.errors} produced an error."
     )
 
-    return report.status is Report.Status.SUCCESS
+    return status is Report.Status.SUCCESS
 
 
 if __name__ == "__main__":
