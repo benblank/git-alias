@@ -36,6 +36,7 @@ UNALIAS_COMMANDS = {
 
 LOCATION_FLAGS: dict[str, tuple[str, ...]] = {
     "specific file": ("--file", "../gitconfig-specific-file"),
+    "specific file which need quoted": ("--file", "../gitconfig-foo !bar"),
     "global config": ("--global",),
     "local repo config": ("--local",),
     "system config": ("--system",),
@@ -50,7 +51,9 @@ COMMON_ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; 
 CONFIG_LOCATIONS = {
     "": "global config",
     "../gitconfig-specific-file": "specific file",
+    "../gitconfig-foo !bar": "specific file which need quoted",
     "--file ../gitconfig-specific-file": "specific file",
+    "--file ../gitconfig-foo !bar": "specific file which need quoted",
     "--global": "global config",
     "--local": "local repo config",
     "--system": "system config",

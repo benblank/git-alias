@@ -14,7 +14,7 @@ where=default
 while true; do
   case "$1" in
     --config | --config-no-header | --json | --json-compact | --names-only | --shell ) format=$1;;
-    --file ) where="--file $2"; shift;;
+    --file ) where="$2"; shift;;
     --global | --local | --system | --worktree ) where=$1;;
     -- ) shift; break;;
     *) break;;
@@ -31,8 +31,9 @@ if [ "$where" = default ]; then
 
   case "$configured_location" in
     "" ) where=--global;;
-    "--file "* | --global | --local | --system | --worktree ) where="$configured_location";;
-    * ) where="--file $configured_location"
+    --global | --local | --system | --worktree ) where="$configured_location";;
+    "--file "* ) where="$(echo "$configured_location" | cut -c 8-)";;
+    * ) where="$configured_location";;
   esac
 fi
 
@@ -49,15 +50,12 @@ if [ $# -gt 1 ]; then
   # Using "$*" here allows commands like `git alias cdiff diff --cached` to work
   # as expected by combining all the arguments after the alias name into a
   # single string.
-  #
-  # `$where` is deliberately unquoted here, as it may contain multiple
-  # parameters.
-  #
-  # shellcheck disable=2086
-  git config $where alias."$name" "$*"
+  case "$where" in
+    --* ) git config "$where" alias."$name" "$*";;
+    * ) git config --file "$where" alias."$name" "$*";;
+  esac
 else
   # Alias definition missing; display alias(es) instead.
-
 
   # I can't believe there's no *actually* portable way to do this other than to
   # implement (hack) it yourself. Might not work in all cases.
@@ -136,11 +134,10 @@ else
   if [ $# -gt 0 ]; then
     # Display only the named alias.
 
-    # `$where` is deliberately unquoted here, as it may contain multiple
-    # parameters.
-    #
-    # shellcheck disable=2086
-    aliases="$(git config $where --get-regexp "^alias\\.$1\$")"
+    case "$where" in
+      --* ) aliases="$(git config "$where" --get-regexp "^alias\\.$1\$")";;
+      * ) aliases="$(git config --file "$where" --get-regexp "^alias\\.$1\$")";;
+    esac
 
     if [ -z "$aliases" ]; then
       >&2 echo "No alias named \"$1\" exists."
@@ -150,11 +147,10 @@ else
   else
     # Alias name missing; display all aliases.
 
-    # `$where` is deliberately unquoted here, as it may contain multiple
-    # parameters.
-    #
-    # shellcheck disable=2086
-    aliases="$(git config $where --get-regexp ^alias\\.)"
+    case "$where" in
+      --* ) aliases="$(git config "$where" --get-regexp ^alias\\.)";;
+      * ) aliases="$(git config --file "$where" --get-regexp ^alias\\.)";;
+    esac
   fi
 
   echo "$aliases" | awk "BEGIN { $awk_extra_init } $(cat "$script_dir/parse-aliases.awk") $(cat "$script_dir/$formatter")"

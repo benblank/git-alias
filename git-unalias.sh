@@ -6,7 +6,7 @@ where=default
 while true; do
   case "$1" in
     --dry-run ) dry_run="[dry-run] ";;
-    --file ) where="--file $2"; shift;;
+    --file ) where="$2"; shift;;
     --global | --local | --system | --worktree ) where=$1;;
     -- ) shift; break;;
     *) break;;
@@ -29,8 +29,9 @@ if [ "$where" = default ]; then
 
   case "$configured_location" in
     "" ) where=--global;;
-    "--file "* | --global | --local | --system | --worktree ) where="$configured_location";;
-    * ) where="--file $configured_location"
+    --global | --local | --system | --worktree ) where="$configured_location";;
+    "--file "* ) where="$(echo "$configured_location" | cut -c 8-)";;
+    * ) where="$configured_location";;
   esac
 fi
 
@@ -63,11 +64,12 @@ unset_matching_aliases() {
     # shellcheck disable=2254
     case "$1" in
       $pattern )
-        # `$where` is deliberately unquoted here, as it may contain multiple
-        # parameters.
-        #
-        # shellcheck disable=2086
-        if [ -n "$dry_run" ] || git config $where --unset alias."$1";then
+        if [ -n "$dry_run" ] || (
+          case "$where" in
+            --* ) git config "$where" --unset alias."$1";;
+            * ) git config --file "$where" --unset alias."$1";;
+          esac
+        ); then
           echo "${dry_run}'unset $1'"
 
           found=1
@@ -100,12 +102,10 @@ unset_matching_aliases() {
 # any aliases which were unset. This allows us to prevent trying to unset the
 # same alias multiple times if it matches multiple patterns without having to
 # re-query `git config` after every iteration.
-#
-# `$where` is deliberately unquoted here, as it may contain multiple
-# parameters.
-#
-# shellcheck disable=2086
-names="$(git config $where --name-only --get-regexp ^alias\\. | cut -d . -f 2)"
+case "$where" in
+  --* ) names="$(git config "$where" --name-only --get-regexp ^alias\\. | cut -d . -f 2)";;
+  * ) names="$(git config --file "$where" --name-only --get-regexp ^alias\\. | cut -d . -f 2)";;
+esac
 
 while [ $# -gt 0 ]; do
   unset_matching_aliases "$1"
