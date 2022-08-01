@@ -2,6 +2,7 @@ from testlib import (
     CONFIG_LOCATIONS,
     LOCATION_FLAGS,
     NO_ALIASES,
+    CommandOutput,
     GitExecutionContext,
     Suite,
     Test,
@@ -29,7 +30,7 @@ def get_suite() -> Suite:
                 ["git-alias.sh", "foo", "diff a b"],
                 context,
                 exit_code=0,
-                output="",
+                output=CommandOutput(stdout="", stderr=""),
                 aliases={**NO_ALIASES, location_flags: {"foo": "diff a b"}},
             )
         )
@@ -49,7 +50,7 @@ def get_suite() -> Suite:
                 ["git-alias.sh", *location_flags, "foo", "diff a b"],
                 context,
                 exit_code=0,
-                output="",
+                output=CommandOutput(stdout="", stderr=""),
                 aliases={
                     **NO_ALIASES,
                     ("--file", "../gitconfig-unused"): {},

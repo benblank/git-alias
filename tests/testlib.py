@@ -60,20 +60,6 @@ CONFIG_LOCATIONS = {
 }
 
 
-def _format_expected_output(expected: str | re.Pattern) -> str:
-    if isinstance(expected, re.Pattern):
-        return f"a string matching /{expected.pattern}/"
-
-    return repr(expected)
-
-
-def _is_valid_output(expected: str | re.Pattern, actual: str) -> bool:
-    if isinstance(expected, re.Pattern):
-        return expected.search(actual) is not None
-
-    return expected == actual
-
-
 def pick(mapping: Mapping[K, V], keys: Iterable[K]) -> dict[K, V]:
     """Filter a mapping such that only the specified keys are retained.
 
@@ -83,12 +69,68 @@ def pick(mapping: Mapping[K, V], keys: Iterable[K]) -> dict[K, V]:
     return {key: mapping[key] for key in keys}
 
 
+Matcher = str | re.Pattern | list[re.Pattern]
+
+
 @dataclass(kw_only=True)
 class CommandOutput:
     """Represents the output expected from a command on its stdout and strerr."""
 
-    stderr: str | re.Pattern
-    stdout: str | re.Pattern
+    stderr: Matcher
+    stdout: Matcher
+
+    @classmethod
+    def __format_expectation(cls, matcher: Matcher) -> str:
+        if isinstance(matcher, list):
+            if len(matcher) == 1:
+                return f"a string matching /{matcher[0].pattern}/"
+
+            if len(matcher) == 2:
+                return (
+                    f"a string matching /{matcher[0].pattern}/"
+                    f" and /{matcher[1].pattern}/"
+                )
+
+            last = f"/{matcher[-1].pattern}/"
+
+            return (
+                "a string matching"
+                f" /{'/, /'.join(pattern.pattern for pattern in matcher[:-1])}/,"
+                f" and {last}"
+            )
+
+        if isinstance(matcher, re.Pattern):
+            return f"a string matching /{matcher.pattern}/"
+
+        return repr(matcher)
+
+    def get_stderr_error(self, candidate: str) -> str | None:
+        if CommandOutput.__matches(self.stderr, candidate):
+            return None
+
+        return (
+            CommandOutput.__format_expectation(self.stderr)
+            + f", but got {repr(candidate)}"
+        )
+
+    def get_stdout_error(self, candidate: str) -> str | None:
+        if CommandOutput.__matches(self.stdout, candidate):
+            return None
+
+        return (
+            CommandOutput.__format_expectation(self.stdout)
+            + f", but got {repr(candidate)}"
+        )
+
+    @classmethod
+    def __matches(cls, matcher: Matcher, candidate: str) -> bool:
+        if isinstance(matcher, list):
+            return all(pattern.search(candidate) is not None for pattern in matcher)
+
+        if isinstance(matcher, re.Pattern):
+            return matcher.search(candidate) is not None
+
+        return matcher == candidate
 
 
 class GitExecutionContext:
@@ -161,12 +203,7 @@ class GitExecutionContext:
             )
 
     def execute_command(
-        self,
-        command: Sequence[str],
-        *,
-        cwd: Path | None = None,
-        combine_output: bool = False,
-        check: bool = False,
+        self, command: Sequence[str], *, cwd: Path | None = None, check: bool = False
     ) -> subprocess.CompletedProcess[str]:
         cwd = cwd if cwd is not None else self.repo_dir
 
@@ -177,7 +214,7 @@ class GitExecutionContext:
             text=True,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT if combine_output else subprocess.PIPE,
+            stderr=subprocess.PIPE,
             check=check,
         )
 
@@ -459,11 +496,8 @@ class Test:
     If unset, the exit code will be ignored.
     """
 
-    output: str | re.Pattern | CommandOutput | None = field(default=None, kw_only=True)
+    output: CommandOutput | None = field(default=None, kw_only=True)
     """If set, the expected output from executing Git.
-
-    Use a string or pattern to velidate the combined output (stdout and stderr).
-    Use `CommandOutput` to validate them individually.
 
     If unset, the output will be ignored.
     """
@@ -487,9 +521,7 @@ class Test:
         for location_flags, aliases in self.define_aliases.items():
             self.context.add_aliases(location_flags, aliases)
 
-        result = self.context.execute_command(
-            self.command_line, combine_output=not isinstance(self.output, CommandOutput)
-        )
+        result = self.context.execute_command(self.command_line)
 
         if self.exit_code is not None and result.returncode != self.exit_code:
             report.failures.append(
@@ -497,24 +529,15 @@ class Test:
             )
 
         if self.output is not None:
-            if isinstance(self.output, CommandOutput):
-                if not _is_valid_output(self.output.stdout, result.stdout):
-                    report.failures.append(
-                        f"expected {_format_expected_output(self.output.stdout)}"
-                        f" on stdout, but got {repr(result.stdout)}"
-                    )
+            stdout_error = self.output.get_stdout_error(result.stdout)
 
-                if not _is_valid_output(self.output.stderr, result.stderr):
-                    report.failures.append(
-                        f"expected {_format_expected_output(self.output.stderr)}"
-                        f" on stderr, but got {repr(result.stderr)}"
-                    )
-            else:
-                if not _is_valid_output(self.output, result.stdout):
-                    report.failures.append(
-                        f"expected {_format_expected_output(self.output)}"
-                        f" as output, but got {repr(result.stdout)}"
-                    )
+            if stdout_error is not None:
+                report.failures.append(stdout_error)
+
+            stderr_error = self.output.get_stderr_error(result.stderr)
+
+            if stderr_error is not None:
+                report.failures.append(stderr_error)
 
         if self.aliases is not None:
             for location_flags, expected in self.aliases.items():

@@ -1,4 +1,4 @@
-from testlib import Suite, Test
+from testlib import CommandOutput, Suite, Test
 
 
 def get_suite() -> Suite:
@@ -12,14 +12,14 @@ def get_suite() -> Suite:
                         "supports a single argument as the body of an alias",
                         ["git-alias.sh", "--global", "foo", "diff a b"],
                         exit_code=0,
-                        output="",
+                        output=CommandOutput(stdout="", stderr=""),
                         aliases={("--global",): {"foo": "diff a b"}},
                     ),
                     Test(
                         "supports multiple arguments as the body of an alias",
                         ["git-alias.sh", "--global", "foo", "diff", "a", "b"],
                         exit_code=0,
-                        output="",
+                        output=CommandOutput(stdout="", stderr=""),
                         aliases={("--global",): {"foo": "diff a b"}},
                     ),
                 ],

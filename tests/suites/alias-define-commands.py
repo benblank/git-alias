@@ -1,4 +1,4 @@
-from testlib import ALIAS_COMMANDS, NO_ALIASES, Suite, Test
+from testlib import ALIAS_COMMANDS, NO_ALIASES, CommandOutput, Suite, Test
 
 
 def get_suite() -> Suite:
@@ -15,7 +15,7 @@ def get_suite() -> Suite:
                                 name,
                                 [*command, "--global", "foo", "diff a b"],
                                 exit_code=0,
-                                output="",
+                                output=CommandOutput(stdout="", stderr=""),
                                 aliases={
                                     **NO_ALIASES,
                                     ("--global",): {"foo": "diff a b"},
