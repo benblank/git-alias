@@ -14,13 +14,13 @@ from testlib import (
 # A mapping of location flags to randomly-generated alias names, so that we can
 # tell which location was queried.
 LOCATION_ALIAS_NAMES = {
-    location_flags: "".join(random.choices(string.ascii_lowercase, k=16))
-    for location_flags in LOCATION_FLAGS.values()
+    location_flag: "".join(random.choices(string.ascii_lowercase, k=16))
+    for location_flag in LOCATION_FLAGS.values()
 }
 
 UNIQUE_ALIASES = {
-    l_flags: {LOCATION_ALIAS_NAMES[l_flags]: "diff"}
-    for l_flags in LOCATION_FLAGS.values()
+    location_flag: {LOCATION_ALIAS_NAMES[location_flag]: "diff"}
+    for location_flag in LOCATION_FLAGS.values()
 }
 
 
@@ -37,23 +37,23 @@ def get_suite() -> Suite:
                 ["git", "config", "--local", "git-alias.config-file", setting]
             )
 
-        location_flags = LOCATION_FLAGS[location_name]
+        location_flag = LOCATION_FLAGS[location_name]
 
         config_tests.append(
             Test(
                 setting if setting else "(not set)",
-                ["git-alias.sh", "--shell", LOCATION_ALIAS_NAMES[location_flags]],
+                ["git-alias.sh", "--shell", LOCATION_ALIAS_NAMES[location_flag]],
                 context,
                 define_aliases=UNIQUE_ALIASES,
                 exit_code=0,
                 output=CommandOutput(
-                    stdout=f"git alias {LOCATION_ALIAS_NAMES[location_flags]} 'diff'\n",
+                    stdout=f"git alias {LOCATION_ALIAS_NAMES[location_flag]} 'diff'\n",
                     stderr="",
                 ),
             )
         )
 
-    for name, location_flags in LOCATION_FLAGS.items():
+    for name, location_flag in LOCATION_FLAGS.items():
         context = GitExecutionContext()
 
         # Define a config setting, which should always be overridden by the cli
@@ -70,15 +70,15 @@ def get_suite() -> Suite:
                 name,
                 [
                     "git-alias.sh",
-                    *location_flags,
+                    *location_flag,
                     "--shell",
-                    LOCATION_ALIAS_NAMES[location_flags],
+                    LOCATION_ALIAS_NAMES[location_flag],
                 ],
                 context,
                 define_aliases=UNIQUE_ALIASES,
                 exit_code=0,
                 output=CommandOutput(
-                    stdout=f"git alias {LOCATION_ALIAS_NAMES[location_flags]} 'diff'\n",
+                    stdout=f"git alias {LOCATION_ALIAS_NAMES[location_flag]} 'diff'\n",
                     stderr="",
                 ),
             )

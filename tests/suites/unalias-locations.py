@@ -11,7 +11,7 @@ from testlib import (
 
 
 ALL_ALIASES = {
-    location_flags: COMMON_ALIASES for location_flags in LOCATION_FLAGS.values()
+    location_flag: COMMON_ALIASES for location_flag in LOCATION_FLAGS.values()
 }
 
 
@@ -28,7 +28,7 @@ def get_suite() -> Suite:
                 ["git", "config", "--local", "git-alias.config-file", setting]
             )
 
-        location_flags = LOCATION_FLAGS[location_name]
+        location_flag = LOCATION_FLAGS[location_name]
 
         config_tests.append(
             Test(
@@ -40,12 +40,12 @@ def get_suite() -> Suite:
                 output=CommandOutput(stdout="'unset ml'\n", stderr=""),
                 aliases={
                     **ALL_ALIASES,
-                    location_flags: pick(COMMON_ALIASES, ["foo", "func"]),
+                    location_flag: pick(COMMON_ALIASES, ["foo", "func"]),
                 },
             )
         )
 
-    for name, location_flags in LOCATION_FLAGS.items():
+    for name, location_flag in LOCATION_FLAGS.items():
         context = GitExecutionContext()
 
         # Define a config setting, which should always be overridden by the cli
@@ -60,7 +60,7 @@ def get_suite() -> Suite:
         cli_tests.append(
             Test(
                 name,
-                ["git-unalias.sh", *location_flags, "ml"],
+                ["git-unalias.sh", *location_flag, "ml"],
                 context,
                 define_aliases=ALL_ALIASES,
                 exit_code=0,
@@ -68,7 +68,7 @@ def get_suite() -> Suite:
                 aliases={
                     **ALL_ALIASES,
                     ("--file", "../gitconfig-unused"): COMMON_ALIASES,
-                    location_flags: pick(COMMON_ALIASES, ["foo", "func"]),
+                    location_flag: pick(COMMON_ALIASES, ["foo", "func"]),
                 },
             )
         )

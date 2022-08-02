@@ -36,14 +36,14 @@ UNALIAS_COMMANDS = {
 
 LOCATION_FLAGS: dict[str, tuple[str, ...]] = {
     "specific file": ("--file", "../gitconfig-specific-file"),
-    "specific file which need quoted": ("--file", "../gitconfig-foo !bar"),
+    "specific file which needs quoted": ("--file", "../gitconfig-foo !bar"),
     "global config": ("--global",),
     "local repo config": ("--local",),
     "system config": ("--system",),
 }
 
 NO_ALIASES: dict[tuple[str, ...], dict[str, str]] = {
-    location_flags: {} for location_flags in LOCATION_FLAGS.values()
+    location_flag: {} for location_flag in LOCATION_FLAGS.values()
 }
 
 COMMON_ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
@@ -51,9 +51,9 @@ COMMON_ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; 
 CONFIG_LOCATIONS = {
     "": "global config",
     "../gitconfig-specific-file": "specific file",
-    "../gitconfig-foo !bar": "specific file which need quoted",
+    "../gitconfig-foo !bar": "specific file which needs quoted",
     "--file ../gitconfig-specific-file": "specific file",
-    "--file ../gitconfig-foo !bar": "specific file which need quoted",
+    "--file ../gitconfig-foo !bar": "specific file which needs quoted",
     "--global": "global config",
     "--local": "local repo config",
     "--system": "system config",
@@ -185,20 +185,19 @@ class GitExecutionContext:
         )
 
     def add_aliases(
-        self, location_flags: Sequence[str], aliases: Mapping[str, str]
+        self, location_flag: Sequence[str], aliases: Mapping[str, str]
     ) -> None:
         for name, contents in aliases.items():
             self.execute_command(
-                ["git", "config", *location_flags, "alias." + name, contents],
-                check=True,
+                ["git", "config", *location_flag, "alias." + name, contents], check=True
             )
 
-    def clear_aliases(self, location_flags: Sequence[str]) -> None:
+    def clear_aliases(self, location_flag: Sequence[str]) -> None:
         # We could run `git config --name-only` rather than picking the keys off
         # `get_aliases()`, but this is simpler.
-        for name in self.get_aliases(location_flags).keys():
+        for name in self.get_aliases(location_flag).keys():
             self.execute_command(
-                ["git", "config", *location_flags, "--unset-all", "alias." + name],
+                ["git", "config", *location_flag, "--unset-all", "alias." + name],
                 check=True,
             )
 
@@ -218,7 +217,7 @@ class GitExecutionContext:
             check=check,
         )
 
-    def get_aliases(self, location_flags: Sequence[str]) -> Mapping[str, str]:
+    def get_aliases(self, location_flag: Sequence[str]) -> Mapping[str, str]:
         aliases = {}
 
         try:
@@ -226,7 +225,7 @@ class GitExecutionContext:
                 [
                     "git",
                     "config",
-                    *location_flags,
+                    *location_flag,
                     "--null",
                     "--get-regexp",
                     "^alias\\.",
@@ -518,8 +517,8 @@ class Test:
     def run(self, report: Report):
         """Executes the test case."""
 
-        for location_flags, aliases in self.define_aliases.items():
-            self.context.add_aliases(location_flags, aliases)
+        for location_flag, aliases in self.define_aliases.items():
+            self.context.add_aliases(location_flag, aliases)
 
         result = self.context.execute_command(self.command_line)
 
@@ -540,8 +539,8 @@ class Test:
                 report.failures.append(stderr_error)
 
         if self.aliases is not None:
-            for location_flags, expected in self.aliases.items():
-                actual = self.context.get_aliases(location_flags)
+            for location_flag, expected in self.aliases.items():
+                actual = self.context.get_aliases(location_flag)
 
                 if actual != expected:
                     report.failures.append(
