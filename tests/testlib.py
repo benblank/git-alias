@@ -109,8 +109,8 @@ class CommandOutput:
             return None
 
         return (
-            CommandOutput.__format_expectation(self.stderr)
-            + f", but got {repr(candidate)}"
+            f"expected {CommandOutput.__format_expectation(self.stderr)} on"
+            f" stderr, but got {repr(candidate)}"
         )
 
     def get_stdout_error(self, candidate: str) -> str | None:
@@ -118,8 +118,8 @@ class CommandOutput:
             return None
 
         return (
-            CommandOutput.__format_expectation(self.stdout)
-            + f", but got {repr(candidate)}"
+            f"expected {CommandOutput.__format_expectation(self.stdout)} on"
+            f" stdout, but got {repr(candidate)}"
         )
 
     @classmethod
