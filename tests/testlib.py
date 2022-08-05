@@ -22,43 +22,6 @@ _TESTS_DIR = (Path.cwd() / Path(__file__)).resolve().parent
 _SCRIPTS_DIR = _TESTS_DIR.parent
 _TEMP_ROOT = _TESTS_DIR / "tmp"
 
-ALIAS_COMMANDS = {
-    "symlink with absolute path": ["git", "alias-abs"],
-    "symlink with relative path": ["git", "alias-rel"],
-    "no symlink": ["git-alias.sh"],
-}
-
-UNALIAS_COMMANDS = {
-    "symlink with absolute path": ["git", "unalias-abs"],
-    "symlink with relative path": ["git", "unalias-rel"],
-    "no symlink": ["git-unalias.sh"],
-}
-
-LOCATION_FLAGS: dict[str, tuple[str, ...]] = {
-    "specific file": ("--file", "../gitconfig-specific-file"),
-    "specific file which needs quoted": ("--file", "../gitconfig-foo !bar"),
-    "global config": ("--global",),
-    "local repo config": ("--local",),
-    "system config": ("--system",),
-}
-
-NO_ALIASES: dict[tuple[str, ...], dict[str, str]] = {
-    location_flag: {} for location_flag in LOCATION_FLAGS.values()
-}
-
-COMMON_ALIASES = {"foo": "diff", "ml": "!echo foo\necho bar", "func": "!f() {}; f"}
-
-CONFIG_LOCATIONS = {
-    "": "global config",
-    "../gitconfig-specific-file": "specific file",
-    "../gitconfig-foo !bar": "specific file which needs quoted",
-    "--file ../gitconfig-specific-file": "specific file",
-    "--file ../gitconfig-foo !bar": "specific file which needs quoted",
-    "--global": "global config",
-    "--local": "local repo config",
-    "--system": "system config",
-}
-
 
 def pick(mapping: Mapping[K, V], keys: Iterable[K]) -> dict[K, V]:
     """Filter a mapping such that only the specified keys are retained.
@@ -159,8 +122,6 @@ class GitExecutionContext:
 
         os.symlink(_SCRIPTS_DIR / "git-alias.sh", self.bin_dir / "git-alias-abs")
         os.symlink(scripts_dir_rel / "git-alias.sh", self.bin_dir / "git-alias-rel")
-        os.symlink(_SCRIPTS_DIR / "git-unalias.sh", self.bin_dir / "git-unalias-abs")
-        os.symlink(scripts_dir_rel / "git-unalias.sh", self.bin_dir / "git-unalias-rel")
 
         self.env = {
             "GIT_CONFIG_GLOBAL": str(self.base_dir / "gitconfig-global"),
@@ -486,7 +447,7 @@ class Test:
     """Aliases to create prior to running the test case.
 
     The keys are the "location" flag(s) to pass to `git config` and the values
-    are {name: definition} mappings of aliases to define.
+    are {name: body} mappings of aliases to define.
     """
 
     exit_code: int | None = field(default=None, kw_only=True)
@@ -507,7 +468,7 @@ class Test:
     """The aliases which must be present after the test case has executed.
 
     The keys are the "location" flag(s) to pass to `git config` and the values
-    are {name: definition} mappings of aliases to check.
+    are {name: body} mappings of aliases to check.
 
     Note that *all* aliases defined in the execution context must be present in
     `aliases_after` **and** that *all* aliases in `aliases_after` must be
