@@ -6,9 +6,16 @@ function handle(name, body) {
 
 ## Turn any string into a gitconfig-style double-quoted string.
 function quote(string) {
+  # Values only need surrounded by quotes if they have leading/trailing
+  # whitespace (which is otherwise stripped) or characters which would start a
+  # comment. This appears to be how Git decides whether to quote a value.
+  surrounding_quotes = string ~ /^\s|\s$|[#;]/ ? "\"" : ""
+
   gsub(/\\/, "\\\\", string)
+  gsub(/\b/, "\\b", string)
   gsub(/\n/, "\\n", string)
+  gsub(/\t/, "\\t", string)
   gsub(/"/, "\\\"", string)
 
-  return "\"" string "\""
+  return surrounding_quotes string surrounding_quotes
 }
