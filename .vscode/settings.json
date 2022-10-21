@@ -9,5 +9,6 @@
   "python.linting.mypyEnabled": true,
   "python.formatting.provider": "black",
   "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": ["--extend-ignore=E203", "--max-line-length=1000"]
+  "python.linting.flake8Args": ["--extend-ignore=E203", "--max-line-length=1000"],
+  "python.analysis.typeCheckingMode": "strict"
 }

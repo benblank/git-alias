@@ -11,7 +11,7 @@ import sys
 import tempfile
 import traceback
 from types import TracebackType
-from typing import ClassVar, Hashable, Iterable, Mapping, Sequence, Type, TypeVar
+from typing import Any, ClassVar, Hashable, Iterable, Mapping, Sequence, Type, TypeVar
 import weakref
 
 
@@ -69,7 +69,7 @@ def pick(mapping: Mapping[K, V], keys: Iterable[K]) -> dict[K, V]:
     return {key: mapping[key] for key in keys}
 
 
-Matcher = str | re.Pattern | list[re.Pattern]
+Matcher = str | re.Pattern[str] | list[re.Pattern[str]]
 
 
 @dataclass(kw_only=True)
@@ -177,7 +177,7 @@ class GitExecutionContext:
         shutil.rmtree(temp_dir, onerror=GitExecutionContext._on_cleanup_error)
 
     @classmethod
-    def _on_cleanup_error(cls, function, path: str, exception_info) -> None:
+    def _on_cleanup_error(cls, function: Any, path: str, exception_info: Any) -> None:
         # Not much can be done (without an unreasonable amount of effort) other
         # than to report it and continue.
         print(
@@ -218,7 +218,7 @@ class GitExecutionContext:
         )
 
     def get_aliases(self, location_flag: Sequence[str]) -> Mapping[str, str]:
-        aliases = {}
+        aliases: dict[str, str] = {}
 
         try:
             result = self.execute_command(
@@ -250,7 +250,7 @@ class GitExecutionContext:
 # are themselves mutable, but it at least prevents any of the fields from being
 # reassigned.
 @dataclass(frozen=True)
-class Report(AbstractContextManager):
+class Report(AbstractContextManager["Report"]):
     @dataclass(kw_only=True)
     class Counts:
         tests: int = 0
@@ -375,7 +375,7 @@ class Report(AbstractContextManager):
         return exc_type is None or issubclass(exc_type, Exception)
 
     # TODO? make sure this is only called after the report is "finished"
-    def print(self):
+    def print(self) -> None:
         if self.show_successful or self.status is not Report.Status.SUCCESS:
             self.__println(
                 Report.__icons[self.status]
@@ -514,7 +514,7 @@ class Test:
     defined in the execution context.
     """
 
-    def run(self, report: Report):
+    def run(self, report: Report) -> None:
         """Executes the test case."""
 
         for location_flag, aliases in self.define_aliases.items():
